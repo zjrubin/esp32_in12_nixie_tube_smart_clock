@@ -1,3 +1,5 @@
 {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "cSpell.words": ["debug", "debug serial printfln", "printfln", "serial"],
+    "C_Cpp.clang_format_style": "Google"
 }
