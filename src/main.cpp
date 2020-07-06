@@ -37,15 +37,20 @@ constexpr int c_data_pin = 26;
 
 constexpr int c_upper_left_dot = 25;
 
-const int c_rotary_encoder_switch_pin = 2;
+constexpr int c_rotary_encoder_switch_pin = 16;
+constexpr int c_rotary_encoder_dt_pin = 17;
+constexpr int c_rotary_encoder_clk_pin = 5;
 
 TaskHandle_t g_task_configure_handle = NULL;
+TaskHandle_t g_task_cycle_digit_handle = NULL;
 
 SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
 
+void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
 void shift_out_nixie_digit(uint8_t digit);
 void rotary_encoder_switch_isr();
+int get_config_value(int initial_value);
 
 void setup() {
   // Nixie setup
@@ -61,29 +66,44 @@ void setup() {
   pinMode(c_rotary_encoder_switch_pin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(c_rotary_encoder_switch_pin),
                   rotary_encoder_switch_isr, FALLING);
+  pinMode(c_rotary_encoder_dt_pin, INPUT);
+  pinMode(c_rotary_encoder_clk_pin, INPUT);
 
   Serial.begin(BAUD_RATE);
 
-  xTaskCreate(task_configure, "configure", configMINIMAL_STACK_SIZE, NULL, 1,
+  xTaskCreate(task_cycle_digit, "cycle_digit", configMINIMAL_STACK_SIZE, NULL,
+              1, &g_task_cycle_digit_handle);
+
+  xTaskCreate(task_configure, "configure", 2000, NULL, 2,
               &g_task_configure_handle);
 }
 
 // Idle task
-void loop() {
-  for (int i = 0; i < NUM_ELEMENTS(nixie_digits); ++i) {
-    shift_out_nixie_digit(i);
-    delay(500);
-    digitalWrite(c_upper_left_dot, !digitalRead(c_upper_left_dot));
+void loop() {}
+
+void task_cycle_digit(void* pvParameters) {
+  for (;;) {
+    for (size_t i = 0; i < NUM_ELEMENTS(nixie_digits); ++i) {
+      shift_out_nixie_digit(i);
+      delay(500);
+      digitalWrite(c_upper_left_dot, !digitalRead(c_upper_left_dot));
+    }
   }
 }
 
 void task_configure(void* pvParameters) {
   for (;;) {
     if (xSemaphoreTake(g_semaphore_configure, portMAX_DELAY) == pdTRUE) {
+      vTaskSuspend(g_task_cycle_digit_handle);
       debug_serial_println("Configuration Menu:");
-      //   while (true) {
-      //     Serial.println("HERE");
-      //   }
+      while (true) {
+        int test_config_value = get_config_value(5);
+        debug_serial_printfln("Config value received: %d", test_config_value);
+        // Serial.println("HERE");
+        // vTaskDelay(5000 / portTICK_PERIOD_MS);
+        break;
+      }
+      vTaskResume(g_task_cycle_digit_handle);
     }
   }
 }
@@ -105,5 +125,42 @@ void rotary_encoder_switch_isr() {
     debug_serial_println("rotary_encoder_switch_isr");
     xSemaphoreGiveFromISR(g_semaphore_configure, NULL);
     portYIELD_FROM_ISR();
+  }
+}
+
+int get_config_value(int initial_value) {
+  int previous_state_clk = digitalRead(c_rotary_encoder_clk_pin);
+  int counter = initial_value;
+
+  while (true) {
+    int current_state_clk = digitalRead(c_rotary_encoder_clk_pin);
+
+    // If the previous and the current state of the inputCLK are different then
+    // a pulse has occurred
+    if (current_state_clk != previous_state_clk && current_state_clk == LOW) {
+      if (digitalRead(c_rotary_encoder_dt_pin) != current_state_clk) {
+        counter++;
+        if (counter > 9) {
+          counter = 9;
+        }
+      } else {
+        counter--;
+        if (counter < 0) {
+          counter = 0;
+        }
+      }
+
+      debug_serial_print(" -- Value: ");
+      debug_serial_println(counter);
+    }
+    shift_out_nixie_digit(counter);
+
+    previous_state_clk = current_state_clk;
+
+    // Poll the semaphore to see if the encoder switch was pressed
+    if (xSemaphoreTake(g_semaphore_configure, 0) == pdTRUE) {
+      return counter;
+    }
+    vTaskDelay(0);
   }
 }
