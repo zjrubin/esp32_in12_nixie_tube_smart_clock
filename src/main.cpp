@@ -1,4 +1,6 @@
 #include <Arduino.h>
+#include <soc/timer_group_reg.h>
+#include <soc/timer_group_struct.h>
 
 #include "arduino_debug.h"
 
@@ -135,24 +137,31 @@ void rotary_encoder_switch_isr() {
 }
 
 int get_config_value(int initial_value) {
-  int previous_state_clk = digitalRead(c_rotary_encoder_clk_pin);
+  uint16_t state = 0;
   int counter = initial_value;
 
   buzzer_click();
 
   while (true) {
-    int current_state_clk = digitalRead(c_rotary_encoder_clk_pin);
+    // Feed the watchdog timer so that the MCU isn't reset
+    TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
+    TIMERG0.wdt_feed = 1;
+    TIMERG0.wdt_wprotect = 0;
 
-    // If the previous and the current state of the inputCLK are different then
-    // a pulse has occurred
-    if (current_state_clk != previous_state_clk && current_state_clk == LOW) {
-      if (digitalRead(c_rotary_encoder_dt_pin) != current_state_clk) {
+    // Debounce filtering for the rotary encoder
+    state = (state << 1) | digitalRead(c_rotary_encoder_clk_pin) | 0xe000;
+
+    if (state == 0xf000) {
+      state = 0x0000;
+      if (digitalRead(c_rotary_encoder_dt_pin)) {
         counter++;
+        // Maximum value 1 nixie tube can display
         if (counter > 9) {
           counter = 9;
         }
       } else {
         counter--;
+        // Minimum value nixie tubes can display
         if (counter < 0) {
           counter = 0;
         }
@@ -165,13 +174,13 @@ int get_config_value(int initial_value) {
     }
     shift_out_nixie_digit(counter);
 
-    previous_state_clk = current_state_clk;
-
     // Poll the semaphore to see if the encoder switch was pressed
     if (xSemaphoreTake(g_semaphore_configure, 0) == pdTRUE) {
       buzzer_click();
       return counter;
     }
+
+    // Yield to higher priority tasks, otherwise keep running
     vTaskDelay(0);
   }
 }
