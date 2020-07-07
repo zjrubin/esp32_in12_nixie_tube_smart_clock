@@ -26,7 +26,7 @@ const uint8_t nixie_digits[] = {NIXIE_ZERO,  NIXIE_ONE,  NIXIE_TWO, NIXIE_THREE,
                                 NIXIE_FOUR,  NIXIE_FIVE, NIXIE_SIX, NIXIE_SEVEN,
                                 NIXIE_EIGHT, NIXIE_NINE};
 
-#define DEBOUNCE_TIME_MS 150
+#define DEBOUNCE_TIME_MS 200
 #define DEBOUNCE_TIME_TICKS (DEBOUNCE_TIME_MS / portTICK_PERIOD_MS)
 volatile TickType_t previous_tick_count = 0;
 
@@ -41,6 +41,8 @@ constexpr int c_rotary_encoder_switch_pin = 16;
 constexpr int c_rotary_encoder_dt_pin = 17;
 constexpr int c_rotary_encoder_clk_pin = 5;
 
+constexpr int c_buzzer_pin = 18;
+
 TaskHandle_t g_task_configure_handle = NULL;
 TaskHandle_t g_task_cycle_digit_handle = NULL;
 
@@ -51,6 +53,7 @@ void task_configure(void* pvParameters);
 void shift_out_nixie_digit(uint8_t digit);
 void rotary_encoder_switch_isr();
 int get_config_value(int initial_value);
+void buzzer_click();
 
 void setup() {
   // Nixie setup
@@ -68,6 +71,9 @@ void setup() {
                   rotary_encoder_switch_isr, FALLING);
   pinMode(c_rotary_encoder_dt_pin, INPUT);
   pinMode(c_rotary_encoder_clk_pin, INPUT);
+
+  // Buzzer setup
+  pinMode(c_buzzer_pin, OUTPUT);
 
   Serial.begin(BAUD_RATE);
 
@@ -132,6 +138,8 @@ int get_config_value(int initial_value) {
   int previous_state_clk = digitalRead(c_rotary_encoder_clk_pin);
   int counter = initial_value;
 
+  buzzer_click();
+
   while (true) {
     int current_state_clk = digitalRead(c_rotary_encoder_clk_pin);
 
@@ -150,6 +158,8 @@ int get_config_value(int initial_value) {
         }
       }
 
+      buzzer_click();
+
       debug_serial_print(" -- Value: ");
       debug_serial_println(counter);
     }
@@ -159,8 +169,15 @@ int get_config_value(int initial_value) {
 
     // Poll the semaphore to see if the encoder switch was pressed
     if (xSemaphoreTake(g_semaphore_configure, 0) == pdTRUE) {
+      buzzer_click();
       return counter;
     }
     vTaskDelay(0);
   }
+}
+
+void buzzer_click() {
+  digitalWrite(c_buzzer_pin, HIGH);
+  delay(1);
+  digitalWrite(c_buzzer_pin, LOW);
 }
