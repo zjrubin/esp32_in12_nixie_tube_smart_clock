@@ -56,6 +56,7 @@ void shift_out_nixie_digit(uint8_t digit);
 void rotary_encoder_switch_isr();
 int get_config_value(int initial_value);
 void buzzer_click();
+inline void reset_watchdog_timer();
 
 void setup() {
   // Nixie setup
@@ -144,9 +145,7 @@ int get_config_value(int initial_value) {
 
   while (true) {
     // Feed the watchdog timer so that the MCU isn't reset
-    TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
-    TIMERG0.wdt_feed = 1;
-    TIMERG0.wdt_wprotect = 0;
+    reset_watchdog_timer();
 
     // Debounce filtering for the rotary encoder
     state = (state << 1) | digitalRead(c_rotary_encoder_clk_pin) | 0xe000;
@@ -189,4 +188,11 @@ void buzzer_click() {
   digitalWrite(c_buzzer_pin, HIGH);
   delay(1);
   digitalWrite(c_buzzer_pin, LOW);
+}
+
+inline void reset_watchdog_timer() {
+  // Feed the watchdog timer so that the MCU isn't reset
+  TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
+  TIMERG0.wdt_feed = 1;
+  TIMERG0.wdt_wprotect = 0;
 }
