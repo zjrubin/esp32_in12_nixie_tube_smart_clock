@@ -52,6 +52,8 @@ SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
 
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
+void smooth_transition_nixie_digit(uint8_t next_digit, uint8_t current_digit,
+                                   size_t transition_time_ms);
 void shift_out_nixie_digit(uint8_t digit);
 void rotary_encoder_switch_isr();
 int get_config_value(int initial_value);
@@ -80,8 +82,8 @@ void setup() {
 
   Serial.begin(BAUD_RATE);
 
-  xTaskCreate(task_cycle_digit, "cycle_digit", configMINIMAL_STACK_SIZE, NULL,
-              1, &g_task_cycle_digit_handle);
+  xTaskCreate(task_cycle_digit, "cycle_digit", 2000, NULL, 1,
+              &g_task_cycle_digit_handle);
 
   xTaskCreate(task_configure, "configure", 2000, NULL, 2,
               &g_task_configure_handle);
@@ -93,9 +95,12 @@ void loop() {}
 void task_cycle_digit(void* pvParameters) {
   for (;;) {
     for (size_t i = 0; i < NUM_ELEMENTS(nixie_digits); ++i) {
-      shift_out_nixie_digit(i);
-      delay(500);
+      smooth_transition_nixie_digit((i + 1) % NUM_ELEMENTS(nixie_digits), i,
+                                    1000);
+      // shift_out_nixie_digit(i);
+      // delay(500);
       digitalWrite(c_upper_left_dot, !digitalRead(c_upper_left_dot));
+      vTaskDelay(1);
     }
   }
 }
@@ -114,6 +119,28 @@ void task_configure(void* pvParameters) {
       }
       vTaskResume(g_task_cycle_digit_handle);
     }
+  }
+}
+
+void smooth_transition_nixie_digit(uint8_t next_digit, uint8_t current_digit,
+                                   size_t transition_time_ms) {
+  size_t multiplex_count = 100;
+  double single_digit_transition_time =
+      transition_time_ms / (double)multiplex_count;
+
+  for (size_t i = 0; i < multiplex_count; ++i) {
+    double current_digit_display_proportion =
+        (multiplex_count - i) / (double)multiplex_count;
+    double next_digit_display_proportion = i / (double)multiplex_count;
+
+    shift_out_nixie_digit(current_digit);
+    delayMicroseconds(
+        (current_digit_display_proportion * single_digit_transition_time) *
+        1000);
+
+    shift_out_nixie_digit(next_digit);
+    delayMicroseconds(
+        (next_digit_display_proportion * single_digit_transition_time) * 1000);
   }
 }
 
