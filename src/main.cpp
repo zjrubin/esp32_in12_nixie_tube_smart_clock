@@ -1,8 +1,11 @@
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <soc/timer_group_reg.h>
 #include <soc/timer_group_struct.h>
 
 #include "arduino_debug.h"
+
+#define EEPROM_SIZE 10
 
 #define NUM_ELEMENTS(x) \
   ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
@@ -56,7 +59,7 @@ void smooth_transition_nixie_digit(uint8_t next_digit, uint8_t current_digit,
                                    size_t transition_time_ms);
 void shift_out_nixie_digit(uint8_t digit);
 void rotary_encoder_switch_isr();
-int get_config_value(int initial_value);
+uint8_t get_config_value(uint8_t initial_value);
 void buzzer_click();
 inline void reset_watchdog_timer();
 
@@ -79,6 +82,9 @@ void setup() {
 
   // Buzzer setup
   pinMode(c_buzzer_pin, OUTPUT);
+
+  // EEPROM setup
+  EEPROM.begin(EEPROM_SIZE);
 
   Serial.begin(BAUD_RATE);
 
@@ -111,8 +117,12 @@ void task_configure(void* pvParameters) {
       vTaskSuspend(g_task_cycle_digit_handle);
       debug_serial_println("Configuration Menu:");
       while (true) {
-        int test_config_value = get_config_value(5);
-        debug_serial_printfln("Config value received: %d", test_config_value);
+        uint8_t test_config_value = EEPROM.read(0);
+        debug_serial_printfln("Current config value: %d", test_config_value);
+        test_config_value = get_config_value(test_config_value);
+        debug_serial_printfln("Storing config value: %d", test_config_value);
+        EEPROM.write(0, test_config_value);
+        EEPROM.commit();
         // Serial.println("HERE");
         // vTaskDelay(5000 / portTICK_PERIOD_MS);
         break;
@@ -164,7 +174,7 @@ void rotary_encoder_switch_isr() {
   }
 }
 
-int get_config_value(int initial_value) {
+uint8_t get_config_value(uint8_t initial_value) {
   uint16_t state = 0;
   int counter = initial_value;
 
