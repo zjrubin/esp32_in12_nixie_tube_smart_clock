@@ -1,5 +1,16 @@
 {
     "editor.formatOnSave": true,
-    "cSpell.words": ["debug", "debug serial printfln", "printfln", "serial"],
+    "cSpell.words": [
+        "debug",
+        "debug serial printfln",
+        "eeprom",
+        "printfln",
+        "serial",
+        "timg",
+        "timg wdt wkey value",
+        "value",
+        "wdt",
+        "wkey"
+    ],
     "C_Cpp.clang_format_style": "Google"
 }
