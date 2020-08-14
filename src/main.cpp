@@ -44,10 +44,15 @@ void setup() {
   // Buzzer setup
   pinMode(c_buzzer_pin, OUTPUT);
 
-  // EEPROM setup
-  EEPROM.begin(EEPROM_SIZE);
-
   Serial.begin(BAUD_RATE);
+
+  if (ARDUINO_DEBUG) {
+    // Wait for the serial monitor to properly attach to display output
+    delay(1000);
+  }
+
+  // EEPROM setup
+  setup_eeprom();
 
   // RTC Setup
   set_time_from_ntp();
@@ -82,11 +87,11 @@ void task_configure(void* pvParameters) {
       vTaskSuspend(g_task_cycle_digit_handle);
       debug_serial_println("Configuration Menu:");
       while (true) {
-        uint8_t test_config_value = EEPROM.read(0);
+        uint8_t test_config_value = EEPROM.read(1);
         debug_serial_printfln("Current config value: %d", test_config_value);
         test_config_value = get_config_value(test_config_value);
         debug_serial_printfln("Storing config value: %d", test_config_value);
-        EEPROM.write(0, test_config_value);
+        EEPROM.write(1, test_config_value);
         EEPROM.commit();
         // Serial.println("HERE");
         // vTaskDelay(5000 / portTICK_PERIOD_MS);
