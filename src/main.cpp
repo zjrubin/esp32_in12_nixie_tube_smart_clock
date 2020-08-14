@@ -4,8 +4,12 @@
 #include <soc/timer_group_struct.h>
 
 #include "arduino_debug.h"
+#include "ntp.h"
 
 #define EEPROM_SIZE 10
+
+constexpr size_t c_minute_freertos = (60 * (1024 / portTICK_PERIOD_MS));
+#define MINUTE_FREERTOS c_minute_freertos
 
 #define NUM_ELEMENTS(x) \
   ((sizeof(x) / sizeof(0 [x])) / ((size_t)(!(sizeof(x) % sizeof(0 [x])))))
@@ -62,6 +66,7 @@ SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
 
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
+void task_set_time_from_ntp(void* pvParameters);
 void smooth_transition_nixie_digit(uint8_t next_digit, uint8_t current_digit,
                                    size_t transition_time_ms);
 void _smooth_transition_helper(uint8_t next_digit, uint8_t current_digit,
@@ -102,6 +107,8 @@ void setup() {
 
   xTaskCreate(task_configure, "configure", 2000, NULL, 2,
               &g_task_configure_handle);
+
+  xTaskCreate(task_set_time_from_ntp, "set_time_from_ntp", 5000, NULL, 2, NULL);
 }
 
 // Idle task
@@ -137,6 +144,18 @@ void task_configure(void* pvParameters) {
       }
       vTaskResume(g_task_cycle_digit_handle);
     }
+  }
+}
+
+void task_set_time_from_ntp(void* pvParameters) {
+  for (;;) {
+    set_time_from_ntp();
+    // TODO: remove this for loop and put it elsewhere
+    for (int i = 0; i < 100; ++i) {
+      print_local_time();
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    vTaskDelay(15 * MINUTE_FREERTOS);
   }
 }
 

@@ -1,15 +1,19 @@
 {
     "editor.formatOnSave": true,
     "cSpell.words": [
+        "c",
+        "c wifi ssid",
         "debug",
         "debug serial printfln",
         "eeprom",
         "printfln",
         "serial",
+        "ssid",
         "timg",
         "timg wdt wkey value",
         "value",
         "wdt",
+        "wifi",
         "wkey"
     ],
     "C_Cpp.clang_format_style": "Google"
