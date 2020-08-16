@@ -94,9 +94,16 @@ void _smooth_transition_helper(uint8_t next_digit, uint8_t current_digit,
   }
 }
 
-void shift_out_nixie_digit(uint8_t digit) {
-  uint8_t display_digit = LEFT_DISPLAY(nixie_digits[TENS(digit)]) |
-                          RIGHT_DISPLAY(nixie_digits[ONES(digit)]);
+void shift_out_nixie_digit(uint8_t digit, bool blank_leading_zero) {
+  uint8_t left_digit = TENS(digit);
+  if (left_digit == 0 && blank_leading_zero) {
+    left_digit = NIXIE_BLANK_POS;
+  }
+
+  uint8_t right_digit = ONES(digit);
+
+  uint8_t display_digit = LEFT_DISPLAY(nixie_digits[left_digit]) |
+                          RIGHT_DISPLAY(nixie_digits[right_digit]);
 
   digitalWrite(c_latch_pin, LOW);
 
