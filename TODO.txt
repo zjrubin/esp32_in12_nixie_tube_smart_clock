@@ -20,4 +20,5 @@ Config:
     - cycle frequency 
     - hour indication on/off
     
-
+Code Quality:
+    Enable exceptions

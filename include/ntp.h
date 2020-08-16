@@ -8,4 +8,4 @@ extern const int c_daylight_offset_sec;
 
 void set_time_from_ntp();
 
-void print_local_time();
+int print_local_time();

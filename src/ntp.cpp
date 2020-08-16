@@ -45,19 +45,36 @@ void set_time_from_ntp() {
   debug_serial_println(" CONNECTED");
 
   // init and get the time
-  configTime(c_gmt_offset_sec, c_daylight_offset_sec, c_ntp_server);
-  print_local_time();
+  bool ntp_time_configured = false;
+  for (int i = 0; i < 30; ++i) {
+    configTime(c_gmt_offset_sec, c_daylight_offset_sec, c_ntp_server);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    if (print_local_time() == NTP_OK) {
+      ntp_time_configured = true;
+      break;
+    }
+  }
+
+  if (!ntp_time_configured) {
+    debug_serial_printfln(
+        "Failed to configure the time from the provided NTP server: "
+        "%s",
+        c_ntp_server);
+  }
 
   // disconnect WiFi as it's no longer needed
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
 }
 
-void print_local_time() {
+int print_local_time() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
     Serial.println("Failed to obtain time");
-    return;
+    return NTP_ERROR;
   }
+
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  return NTP_OK;
 }

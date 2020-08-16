@@ -7,10 +7,6 @@
 #include "display.h"
 #include "util.h"
 
-#define EEPROM_SIZE 10
-#define EEPROM_SENTINEL_ADDRESS 0
-#define EEPROM_INITIALIZED 1
-
 const int c_rotary_encoder_switch_pin = 16;
 const int c_rotary_encoder_dt_pin = 17;
 const int c_rotary_encoder_clk_pin = 5;
@@ -20,7 +16,7 @@ SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
 void setup_eeprom() {
   EEPROM.begin(EEPROM_SIZE);
 
-  default_initialize_config_values(false);
+  default_initialize_config_values(true);
 }
 
 void default_initialize_config_values(bool force) {
@@ -40,11 +36,8 @@ void default_initialize_config_values(bool force) {
   } else {
     debug_serial_println("Default intializing EEPROM");
 
-    // TODO: add actual default configuration values
-    // For now, just default initialize everything to 0
-    for (size_t i = 0; i < EEPROM_SIZE; ++i) {
-      EEPROM.write(i, 0);
-    }
+    // Add default configuration values here...
+    EEPROM.write(EEPROM_HOUR_FORMAT_ADDRESS, EEPROM_HOUR_FORMAT_DEFAULT);
 
     // Set the sentinel value to show default initialization occurred
     EEPROM.write(EEPROM_SENTINEL_ADDRESS, EEPROM_INITIALIZED);

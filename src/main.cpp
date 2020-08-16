@@ -81,7 +81,9 @@ void task_display_time(void* pvParameters) {
       continue;
     }
 
-    shift_out_time(time_info);
+    // Use the configured hour format
+    uint8_t hour_format = EEPROM.read(EEPROM_HOUR_FORMAT_ADDRESS);
+    shift_out_time(time_info, (hour_format == EEPROM_HOUR_FORMAT_OPTION_1));
     vTaskDelay(45 / portTICK_PERIOD_MS);
   }
 }
@@ -101,14 +103,14 @@ void task_cycle_digit(void* pvParameters) {
 void task_configure(void* pvParameters) {
   for (;;) {
     if (xSemaphoreTake(g_semaphore_configure, portMAX_DELAY) == pdTRUE) {
-      vTaskSuspend(g_task_cycle_digit_handle);
+      vTaskSuspend(g_task_cycle_digit_handle);  // this is NULL
       debug_serial_println("Configuration Menu:");
       while (true) {
         uint8_t test_config_value = EEPROM.read(1);
         debug_serial_printfln("Current config value: %d", test_config_value);
         test_config_value = get_config_value(test_config_value);
         debug_serial_printfln("Storing config value: %d", test_config_value);
-        EEPROM.write(1, test_config_value);
+        EEPROM.write(2, test_config_value);
         EEPROM.commit();
         // Serial.println("HERE");
         // vTaskDelay(5000 / portTICK_PERIOD_MS);
