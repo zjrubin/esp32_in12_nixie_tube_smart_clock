@@ -3,22 +3,23 @@ Modes:
     - Countdown timer
     - Stopwatch
     - Divergence meter
-    
+
 Features:
     - digit cycle
     - random digit cycle
-    - smooth transition for all digits 
+    - smooth transition for all digits
     - show date
     - hour indication buzzer
-    
+
 Config:
     - 12 or 24 hour format
     - manual time config - also should be entered if ntp fails for 30 seconds
     - manual date config
     - colon blinking or not
     - date show frequency: 0 - 60
-    - cycle frequency 
+    - cycle frequency
     - hour indication on/off
-    
+    - blank leading zero for the hour digit
+
 Code Quality:
     Enable exceptions

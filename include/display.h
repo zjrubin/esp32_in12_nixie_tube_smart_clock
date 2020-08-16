@@ -29,6 +29,7 @@
 
 #define NUM_NIXIE_DIGITS 10
 #define NIXIE_BLANK_POS 10
+#define NIXIE_BLANK_DIGIT -1  // Digit that corresponds to a blank nixie display
 
 #define LEFT_DISPLAY(nixie_digit) (nixie_digit << 4)
 #define RIGHT_DISPLAY(nixie_digit) (nixie_digit)
@@ -58,6 +59,9 @@ void _smooth_transition_helper(uint8_t next_digit, uint8_t current_digit,
                                size_t transition_time_ms);
 
 // Digit must be in range [0, 99]
-void shift_out_nixie_digit(uint8_t digit, bool blank_leading_zero = false);
+void shift_out_nixie_digit_pair(uint8_t digit, bool blank_leading_zero = false);
+
+// Digit must be in range [0, 9]
+void shift_out_nixie_digit_single(uint8_t digit);
 
 void shift_out_nixie_dots(uint8_t dots);

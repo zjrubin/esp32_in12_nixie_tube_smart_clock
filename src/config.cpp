@@ -56,11 +56,19 @@ void default_initialize_config_values(bool force) {
   }
 }
 
-uint8_t get_config_value(uint8_t initial_value) {
+uint8_t get_config_value(uint8_t initial_value, uint8_t lower_bound,
+                         uint8_t upper_bound) {
   uint16_t state = 0;
   int counter = initial_value;
 
   buzzer_click();
+
+  // Blank the first displays
+  for (int i = 0; i < 4; ++i) {
+    shift_out_nixie_digit_single(NIXIE_BLANK_DIGIT);
+  }
+  shift_out_nixie_digit_pair(counter);
+  shift_out_nixie_dots(0);
 
   while (true) {
     // Feed the watchdog timer so that the MCU isn't reset
@@ -74,14 +82,14 @@ uint8_t get_config_value(uint8_t initial_value) {
       if (digitalRead(c_rotary_encoder_dt_pin)) {
         counter++;
         // Maximum value 1 nixie tube can display
-        if (counter > 9) {
-          counter = 9;
+        if (counter > upper_bound) {
+          counter = upper_bound;
         }
       } else {
         counter--;
         // Minimum value nixie tubes can display
-        if (counter < 0) {
-          counter = 0;
+        if (counter < lower_bound) {
+          counter = lower_bound;
         }
       }
 
@@ -89,8 +97,14 @@ uint8_t get_config_value(uint8_t initial_value) {
 
       debug_serial_print(" -- Value: ");
       debug_serial_println(counter);
+
+      // Blank the first displays
+      for (int i = 0; i < 4; ++i) {
+        shift_out_nixie_digit_single(NIXIE_BLANK_DIGIT);
+      }
+      shift_out_nixie_digit_pair(counter);
+      shift_out_nixie_dots(0);
     }
-    shift_out_nixie_digit(counter);
 
     // Poll the semaphore to see if the encoder switch was pressed
     if (xSemaphoreTake(g_semaphore_configure, 0) == pdTRUE) {

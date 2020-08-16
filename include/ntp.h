@@ -1,5 +1,8 @@
 #pragma once
 
+#define NTP_OK 0
+#define NTP_ERROR -1
+
 extern const char* const c_wifi_ssid;
 extern const char* const c_wifi_password;
 extern const char* const c_ntp_server;

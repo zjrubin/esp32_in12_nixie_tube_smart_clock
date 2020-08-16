@@ -103,12 +103,12 @@ void task_cycle_digit(void* pvParameters) {
 void task_configure(void* pvParameters) {
   for (;;) {
     if (xSemaphoreTake(g_semaphore_configure, portMAX_DELAY) == pdTRUE) {
-      vTaskSuspend(g_task_cycle_digit_handle);  // this is NULL
+      // vTaskSuspend(g_task_cycle_digit_handle);  // this is NULL
       debug_serial_println("Configuration Menu:");
       while (true) {
         uint8_t test_config_value = EEPROM.read(1);
         debug_serial_printfln("Current config value: %d", test_config_value);
-        test_config_value = get_config_value(test_config_value);
+        test_config_value = get_config_value(test_config_value, 0, 99);
         debug_serial_printfln("Storing config value: %d", test_config_value);
         EEPROM.write(2, test_config_value);
         EEPROM.commit();
@@ -116,7 +116,7 @@ void task_configure(void* pvParameters) {
         // vTaskDelay(5000 / portTICK_PERIOD_MS);
         break;
       }
-      vTaskResume(g_task_cycle_digit_handle);
+      // vTaskResume(g_task_cycle_digit_handle);
     }
   }
 }
