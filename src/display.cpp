@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "arduino_debug.h"
 #include "util.h"
 
 const int c_clock_pin = 12;
@@ -10,6 +11,58 @@ const int c_output_enable_pin = 27;
 const int c_data_pin = 26;
 
 const int c_upper_left_dot = 25;
+
+const uint8_t nixie_digits[] = {NIXIE_ZERO,  NIXIE_ONE,       NIXIE_TWO,
+                                NIXIE_THREE, NIXIE_FOUR,      NIXIE_FIVE,
+                                NIXIE_SIX,   NIXIE_SEVEN,     NIXIE_EIGHT,
+                                NIXIE_NINE,  NIXIE_BLANK_CODE};
+
+extern const uint8_t nixie_dots[] = {NIXIE_DOTS_NONE, NIXIE_DOTS_ALL,
+                                     NIXIE_DOTS_LEFT, NIXIE_DOTS_RIGHT,
+                                     NIXIE_DOTS_TOP,  NIXIE_DOTS_BOTTOM};
+
+static inline uint8_t convert_24_hour_to_12_hour(uint8_t hours);
+
+void shift_out_time(const struct tm& time_info, bool twelve_hour_format,
+                    uint8_t nixie_dots) {
+  uint8_t hours = time_info.tm_hour;
+  if (twelve_hour_format) {
+    hours = convert_24_hour_to_12_hour(hours);
+  }
+
+  uint8_t minutes = time_info.tm_min;
+  uint8_t seconds = time_info.tm_sec;
+
+  shift_out_nixie_digit(hours);
+  shift_out_nixie_digit(minutes);
+  shift_out_nixie_digit(seconds);
+
+  // for (uint8_t i = 0; i < 10; ++i) {
+  //   debug_serial_println(i);
+
+  //   digitalWrite(c_latch_pin, LOW);
+
+  //   uint8_t display_digit =
+  //       LEFT_DISPLAY(nixie_digits[i]) | RIGHT_DISPLAY(nixie_digits[i]);
+
+  //   shiftOut(c_data_pin, c_clock_pin, LSBFIRST, display_digit);
+  //   shiftOut(c_data_pin, c_clock_pin, LSBFIRST, display_digit);
+  //   shiftOut(c_data_pin, c_clock_pin, LSBFIRST, display_digit);
+
+  //   // Dots
+  //   display_digit =
+  //       LEFT_DISPLAY(nixie_digits[11]) | RIGHT_DISPLAY(nixie_digits[11]);
+
+  //   shiftOut(c_data_pin, c_clock_pin, LSBFIRST, display_digit);
+
+  //   digitalWrite(c_latch_pin, HIGH);
+
+  //   vTaskDelay(2000 / portTICK_PERIOD_MS);
+  // }
+
+  // Set the dot seperators
+  shift_out_nixie_dots(nixie_dots);
+}
 
 void smooth_transition_nixie_digit(uint8_t next_digit, uint8_t current_digit,
                                    size_t transition_time_ms) {
@@ -42,11 +95,26 @@ void _smooth_transition_helper(uint8_t next_digit, uint8_t current_digit,
 }
 
 void shift_out_nixie_digit(uint8_t digit) {
-  digitalWrite(c_latch_pin, LOW);
+  uint8_t display_digit = LEFT_DISPLAY(nixie_digits[TENS(digit)]) |
+                          RIGHT_DISPLAY(nixie_digits[ONES(digit)]);
 
-  uint8_t display_digit = LEFT_DISPLAY(nixie_digits[digit]);
+  digitalWrite(c_latch_pin, LOW);
 
   shiftOut(c_data_pin, c_clock_pin, LSBFIRST, display_digit);
 
   digitalWrite(c_latch_pin, HIGH);
+}
+
+void shift_out_nixie_dots(uint8_t dots) {
+  digitalWrite(c_latch_pin, LOW);
+
+  // The dots correspond to QA, QB, QC, and QD of the shift register
+  shiftOut(c_data_pin, c_clock_pin, LSBFIRST, (dots <<= 4));
+
+  digitalWrite(c_latch_pin, HIGH);
+}
+
+static inline uint8_t convert_24_hour_to_12_hour(uint8_t hours) {
+  hours = hours % 12;
+  return hours == 0 ? 12 : hours;
 }
