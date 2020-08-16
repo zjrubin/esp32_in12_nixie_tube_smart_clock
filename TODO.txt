@@ -1,0 +1,23 @@
+Modes:
+    - Alarm at set time
+    - Countdown timer
+    - Stopwatch
+    - Divergence meter
+    
+Features:
+    - digit cycle
+    - random digit cycle
+    - smooth transition for all digits 
+    - show date
+    - hour indication buzzer
+    
+Config:
+    - 12 or 24 hour format
+    - manual time config - also should be entered if ntp fails for 30 seconds
+    - manual date config
+    - colon blinking or not
+    - date show frequency: 0 - 60
+    - cycle frequency 
+    - hour indication on/off
+    
+
