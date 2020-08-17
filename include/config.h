@@ -22,5 +22,5 @@ void setup_eeprom();
 
 void default_initialize_config_values(bool force = false);
 
-uint8_t get_config_value(uint8_t initial_value, uint8_t lower_bound = 0,
-                         uint8_t upper_bound = 1);
+uint8_t get_config_value(uint8_t option_number, uint8_t initial_value,
+                         uint8_t lower_bound, uint8_t upper_bound);

@@ -46,9 +46,9 @@ void set_time_from_ntp() {
 
   // init and get the time
   bool ntp_time_configured = false;
-  for (int i = 0; i < 30; ++i) {
+  for (int i = 1; i <= 30; ++i) {
     configTime(c_gmt_offset_sec, c_daylight_offset_sec, c_ntp_server);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay((250 * i) / portTICK_PERIOD_MS);  // Linear backoff
 
     if (print_local_time() == NTP_OK) {
       ntp_time_configured = true;

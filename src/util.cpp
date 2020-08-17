@@ -7,6 +7,6 @@ const int c_buzzer_pin = 18;
 
 void buzzer_click() {
   digitalWrite(c_buzzer_pin, HIGH);
-  delay(1);
+  delayMicroseconds(1000);
   digitalWrite(c_buzzer_pin, LOW);
 }
