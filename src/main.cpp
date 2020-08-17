@@ -76,9 +76,8 @@ void task_display_time(void* pvParameters) {
     }
 
     // Use the configured hour format
-    uint8_t hour_format = EEPROM.read(EEPROM_HOUR_FORMAT_ADDRESS);
-    Nixie_Display::get_instance().display_time(
-        time_info, (hour_format == EEPROM_HOUR_FORMAT_OPTION_1));
+    uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
+    Nixie_Display::get_instance().display_time(time_info, hour_format);
 
     vTaskDelay(45 / portTICK_PERIOD_MS);
   }
@@ -99,16 +98,7 @@ void task_display_time(void* pvParameters) {
 void task_configure(void* pvParameters) {
   for (;;) {
     if (xSemaphoreTake(g_semaphore_configure, portMAX_DELAY) == pdTRUE) {
-      debug_serial_println("Configuration Menu:");
-      while (true) {
-        uint8_t test_config_value = EEPROM.read(2);
-        debug_serial_printfln("Current config value: %d", test_config_value);
-        test_config_value = get_config_value(2, test_config_value, 0, 99);
-        debug_serial_printfln("Storing config value: %d", test_config_value);
-        EEPROM.write(2, test_config_value);
-        EEPROM.commit();
-        break;
-      }
+      handle_configuration();
     }
   }
 }

@@ -11,7 +11,18 @@ const int c_rotary_encoder_switch_pin = 16;
 const int c_rotary_encoder_dt_pin = 17;
 const int c_rotary_encoder_clk_pin = 5;
 
+static const eeprom_option_t c_eeprom_options[] = {
+    {EEPROM_12_HOUR_FORMAT_ADDRESS, EEPROM_12_HOUR_FORMAT_DEFAULT,
+     EEPROM_12_HOUR_FORMAT_LOWER_BOUND, EEPROM_12_HOUR_FORMAT_UPPER_BOUND
+
+    },
+};
+
 SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
+
+static void set_eeprom_config_value(uint8_t option_number,
+                                    uint8_t initial_value, uint8_t lower_bound,
+                                    uint8_t upper_bound);
 
 void setup_eeprom() {
   EEPROM.begin(EEPROM_SIZE);
@@ -37,7 +48,7 @@ void default_initialize_config_values(bool force) {
     debug_serial_println("Default intializing EEPROM");
 
     // Add default configuration values here...
-    EEPROM.write(EEPROM_HOUR_FORMAT_ADDRESS, EEPROM_HOUR_FORMAT_DEFAULT);
+    EEPROM.write(EEPROM_12_HOUR_FORMAT_ADDRESS, EEPROM_12_HOUR_FORMAT_DEFAULT);
 
     // Set the sentinel value to show default initialization occurred
     EEPROM.write(EEPROM_SENTINEL_ADDRESS, EEPROM_INITIALIZED);
@@ -54,6 +65,32 @@ void default_initialize_config_values(bool force) {
       Serial.printf("\t%d: %d\n", i, value);
     }
   }
+}
+
+void handle_configuration() {
+  debug_serial_println("Configuration Menu:");
+  // Go through all the entries in EEPROM to configure them
+  // Note: for condition is "NUM_EEPROM_CONFIG_VALUES + 1" since i starts at 1,
+  // The first address fro config values
+  for (size_t i = 0; i < NUM_ELEMENTS(c_eeprom_options); ++i) {
+    set_eeprom_config_value(
+        c_eeprom_options[i].option_number, c_eeprom_options[i].initial_value,
+        c_eeprom_options[i].lower_bound, c_eeprom_options[i].upper_bound);
+  }
+  EEPROM.commit();  // Still need to commit the changes
+}
+
+static void set_eeprom_config_value(uint8_t option_number,
+                                    uint8_t initial_value, uint8_t lower_bound,
+                                    uint8_t upper_bound) {
+  uint8_t config_value = EEPROM.read(option_number);
+  debug_serial_printf("\tCurrent option: %d value: %d\n", option_number,
+                      config_value);
+  config_value =
+      get_config_value(option_number, config_value, lower_bound, upper_bound);
+  debug_serial_printf("\tStoring option: %d value: %d\n", option_number,
+                      config_value);
+  EEPROM.write(option_number, config_value);
 }
 
 uint8_t get_config_value(uint8_t option_number, uint8_t initial_value,
