@@ -52,6 +52,8 @@ class Nixie_Display {
 
   uint8_t display_config_value(uint8_t option_number, uint8_t value);
 
+  void display_slot_machine_cycle(struct tm* time_info);
+
  private:
   // Put the contents of the display onto the nixie tubes
   void show() const;

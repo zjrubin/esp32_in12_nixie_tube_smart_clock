@@ -71,6 +71,29 @@ uint8_t Nixie_Display::display_config_value(uint8_t option_number,
   show();
 }
 
+void Nixie_Display::display_slot_machine_cycle(struct tm* time_info) {
+  static const int slot_machine_cycle_duration = 7;  // In seconds
+  static const size_t slot_machine_cycle_duration_milliseconds =
+      1000 * 1000 * slot_machine_cycle_duration;
+
+  time_t time = mktime(time_info);
+  time += slot_machine_cycle_duration;
+  // struct tm* end_time = localtime(&time);
+
+  static const int for_loop_iterations = 100;
+  static const int iteration_duration =
+      slot_machine_cycle_duration_milliseconds / for_loop_iterations;
+
+  for (int i = 0; i < for_loop_iterations; ++i) {
+    for (size_t j = 0; j < num_display_digits; ++j) {
+      m_digits[j] = (m_digits[j] + 1) % 10;
+    }
+    show();
+    reset_watchdog_timer();
+    delayMicroseconds(iteration_duration);
+  }
+}
+
 void Nixie_Display::show() const {
   digitalWrite(latch_pin, LOW);
 

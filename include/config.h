@@ -12,6 +12,8 @@
 #define EEPROM_12_HOUR_FORMAT_LOWER_BOUND 0
 #define EEPROM_12_HOUR_FORMAT_UPPER_BOUND 1
 
+// #define EEPROM_DIGIT_CYCLE_FREQUENCY
+
 extern const int c_rotary_encoder_switch_pin;
 extern const int c_rotary_encoder_dt_pin;
 extern const int c_rotary_encoder_clk_pin;

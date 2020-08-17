@@ -12,7 +12,7 @@ Features:
     - hour indication buzzer
 
 Config:
-    - 12 or 24 hour format
+    - 12 or 24 hour format - DONE
     - manual time config - also should be entered if ntp fails for 30 seconds
     - manual date config
     - colon blinking or not

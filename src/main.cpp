@@ -13,7 +13,9 @@ volatile TickType_t previous_tick_count = 0;
 
 TaskHandle_t g_task_configure_handle = NULL;
 TaskHandle_t g_task_cycle_digit_handle = NULL;
+TaskHandle_t g_task_display_time_handle = NULL;
 
+void task_display_slot_machine_cycle(void* pvParameters);
 void task_display_time(void* pvParameters);
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
@@ -52,19 +54,48 @@ void setup() {
   // RTC Setup
   set_time_from_ntp();
 
+  // This task needs to come first since task_display_slot_machine_cyle
+  // needs its handle to suspend it
+  // TODO: have a mutex for accessing nixie_display to remove need of suspending
+  // tasks
+  xTaskCreate(task_display_time, "display_time", 4000, NULL, 0,
+              &g_task_display_time_handle);
+
   xTaskCreate(task_configure, "configure", 2000, NULL, 3,
               &g_task_configure_handle);
+
+  xTaskCreate(task_display_slot_machine_cycle, "slot_machine_cycle", 2000, NULL,
+              3, NULL);
 
   xTaskCreate(task_set_time_from_ntp, "set_time_from_ntp", 5000, NULL, 2, NULL);
 
   // xTaskCreate(task_cycle_digit, "cycle_digit", 2000, NULL, 1,
   //             &g_task_cycle_digit_handle);
-
-  xTaskCreate(task_display_time, "display_time", 4000, NULL, 0, NULL);
 }
 
 // Idle task
 void loop() {}
+
+void task_display_slot_machine_cycle(void* pvParameters) {
+  for (;;) {
+    vTaskSuspend(g_task_display_time_handle);  // TODO, REMOVE!
+    struct tm time_info;
+    memset(&time_info, 0, sizeof(time_info));
+    // if (!getLocalTime(&time_info)) {
+    //   debug_serial_println("Failed to obtain time");
+    //   vTaskDelay(1000 / portTICK_PERIOD_MS);
+    //   continue;
+    // }
+
+    Nixie_Display::get_instance().display_slot_machine_cycle(&time_info);
+
+    vTaskResume(g_task_display_time_handle);  // TODO, REMOVE!
+
+    // vTaskDelay((30 * 1000) / portTICK_PERIOD_MS);
+
+    vTaskDelay(60 * MINUTE_FREERTOS);
+  }
+}
 
 void task_display_time(void* pvParameters) {
   for (;;) {
