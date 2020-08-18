@@ -76,6 +76,8 @@ void setup() {
 void loop() {}
 
 void task_display_slot_machine_cycle(void* pvParameters) {
+  TickType_t previous_wake_time = xTaskGetTickCount();
+
   for (;;) {
     struct tm time_info;
     memset(&time_info, 0, sizeof(time_info));
@@ -92,7 +94,10 @@ void task_display_slot_machine_cycle(void* pvParameters) {
 
     // vTaskDelay((30 * 1000) / portTICK_PERIOD_MS);
 
-    vTaskDelay(60 * MINUTE_FREERTOS);
+    uint8_t slot_machine_cycle_frequency =
+        EEPROM.read(EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_ADDRESS);
+    vTaskDelayUntil(&previous_wake_time,
+                    slot_machine_cycle_frequency * MINUTE_FREERTOS);
   }
 }
 

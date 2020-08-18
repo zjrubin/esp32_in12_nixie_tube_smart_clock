@@ -15,9 +15,11 @@ const int c_rotary_encoder_clk_pin = 5;
 
 static const eeprom_option_t c_eeprom_options[] = {
     {EEPROM_12_HOUR_FORMAT_ADDRESS, EEPROM_12_HOUR_FORMAT_DEFAULT,
-     EEPROM_12_HOUR_FORMAT_LOWER_BOUND, EEPROM_12_HOUR_FORMAT_UPPER_BOUND
-
-    },
+     EEPROM_12_HOUR_FORMAT_LOWER_BOUND, EEPROM_12_HOUR_FORMAT_UPPER_BOUND},
+    {EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_ADDRESS,
+     EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_DEFAULT,
+     EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_LOWER_BOUND,
+     EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_UPPER_BOUND},
 };
 
 SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
@@ -29,7 +31,7 @@ static void set_eeprom_config_value(uint8_t option_number,
 void setup_eeprom() {
   EEPROM.begin(EEPROM_SIZE);
 
-  default_initialize_config_values(true);
+  default_initialize_config_values(false);
 }
 
 void default_initialize_config_values(bool force) {
@@ -49,8 +51,11 @@ void default_initialize_config_values(bool force) {
   } else {
     debug_serial_println("Default intializing EEPROM");
 
-    // Add default configuration values here...
-    EEPROM.write(EEPROM_12_HOUR_FORMAT_ADDRESS, EEPROM_12_HOUR_FORMAT_DEFAULT);
+    // Set default EEPROM values
+    for (size_t i = 0; i < NUM_ELEMENTS(c_eeprom_options); ++i) {
+      EEPROM.write(c_eeprom_options[i].option_number,
+                   c_eeprom_options[i].initial_value);
+    }
 
     // Set the sentinel value to show default initialization occurred
     EEPROM.write(EEPROM_SENTINEL_ADDRESS, EEPROM_INITIALIZED);
