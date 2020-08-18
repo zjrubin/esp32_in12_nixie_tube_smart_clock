@@ -22,7 +22,9 @@ uint8_t Nixie_Display::m_digits[num_display_digits] = {
     NIXIE_ZERO, NIXIE_ZERO, NIXIE_ZERO, NIXIE_ZERO, NIXIE_ZERO, NIXIE_ZERO};
 uint8_t Nixie_Display::m_dots = NIXIE_DOTS_ALL;
 
-Nixie_Display::Nixie_Display() {
+SemaphoreHandle_t Nixie_Display::display_mutex = NULL;
+
+void Nixie_Display::setup_nixie_display() {
   // Set the pin modes
   pinMode(clock_pin, OUTPUT);
   pinMode(latch_pin, OUTPUT);
@@ -30,6 +32,8 @@ Nixie_Display::Nixie_Display() {
   pinMode(data_pin, OUTPUT);
 
   digitalWrite(output_enable_pin, LOW);  // Enables output
+
+  display_mutex = xSemaphoreCreateMutex();
 }
 
 void Nixie_Display::display_time(const struct tm& time_info,
@@ -53,8 +57,7 @@ void Nixie_Display::display_time(const struct tm& time_info,
   show();
 }
 
-uint8_t Nixie_Display::display_config_value(uint8_t option_number,
-                                            uint8_t value) {
+void Nixie_Display::display_config_value(uint8_t option_number, uint8_t value) {
   m_digits[0] = TENS(option_number);
   m_digits[1] = ONES(option_number);
 

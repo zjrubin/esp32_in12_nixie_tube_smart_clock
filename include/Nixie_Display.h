@@ -3,6 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+
 #define ONES(x) x % 10
 #define TENS(x) (x / 10) % 10
 #define HUNDREDS(x) (x / 100) % 10
@@ -40,6 +43,9 @@
 
 class Nixie_Display {
  public:
+  // Setup function. Called once during setup
+  static void setup_nixie_display();
+
   // Returns a reference to the only instance of model (following the Singleton
   // Pattern)
   static Nixie_Display& get_instance() {
@@ -50,9 +56,11 @@ class Nixie_Display {
   void display_time(const struct tm& time_info, bool twelve_hour_format = true,
                     uint8_t nixie_dots = NIXIE_DOTS_ALL);
 
-  uint8_t display_config_value(uint8_t option_number, uint8_t value);
+  void display_config_value(uint8_t option_number, uint8_t value);
 
   void display_slot_machine_cycle(struct tm* time_info);
+
+  static SemaphoreHandle_t display_mutex;
 
  private:
   // Put the contents of the display onto the nixie tubes
@@ -63,7 +71,7 @@ class Nixie_Display {
     return hours == 0 ? 12 : hours;
   }
 
-  Nixie_Display();
+  Nixie_Display(){};
   ~Nixie_Display(){};
 
   // disallow copy/move construction or assignment

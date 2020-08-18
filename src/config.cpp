@@ -5,6 +5,8 @@
 
 #include "Nixie_Display.h"
 #include "arduino_debug.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "util.h"
 
 const int c_rotary_encoder_switch_pin = 16;
@@ -129,7 +131,11 @@ uint8_t get_config_value(uint8_t option_number, uint8_t initial_value,
       debug_serial_println(counter);
     }
 
-    Nixie_Display::get_instance().display_config_value(option_number, counter);
+    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      Nixie_Display::get_instance().display_config_value(option_number,
+                                                         counter);
+      xSemaphoreGive(Nixie_Display::display_mutex);
+    }
 
     // Poll the semaphore to see if the encoder switch was pressed
     if (xSemaphoreTake(g_semaphore_configure, 0) == pdTRUE) {

@@ -4,6 +4,8 @@
 #include "Nixie_Display.h"
 #include "arduino_debug.h"
 #include "config.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "ntp.h"
 #include "util.h"
 
@@ -20,16 +22,12 @@ void task_display_time(void* pvParameters);
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
 void task_set_time_from_ntp(void* pvParameters);
-void smooth_transition_nixie_digit(uint8_t next_digit, uint8_t current_digit,
-                                   size_t transition_time_ms);
-void _smooth_transition_helper(uint8_t next_digit, uint8_t current_digit,
-                               size_t transition_time_ms);
-void shift_out_nixie_digit(uint8_t digit);
+
 void rotary_encoder_switch_isr();
 
 void setup() {
-  // Display setup happens in the constructor of the Nixie_Display singleton
-  // instance
+  // Nixie display setup
+  Nixie_Display::setup_nixie_display();
 
   // Rotary encode setup
   pinMode(c_rotary_encoder_switch_pin, INPUT_PULLUP);
@@ -78,7 +76,6 @@ void loop() {}
 
 void task_display_slot_machine_cycle(void* pvParameters) {
   for (;;) {
-    vTaskSuspend(g_task_display_time_handle);  // TODO, REMOVE!
     struct tm time_info;
     memset(&time_info, 0, sizeof(time_info));
     // if (!getLocalTime(&time_info)) {
@@ -87,9 +84,10 @@ void task_display_slot_machine_cycle(void* pvParameters) {
     //   continue;
     // }
 
-    Nixie_Display::get_instance().display_slot_machine_cycle(&time_info);
-
-    vTaskResume(g_task_display_time_handle);  // TODO, REMOVE!
+    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      Nixie_Display::get_instance().display_slot_machine_cycle(&time_info);
+      xSemaphoreGive(Nixie_Display::display_mutex);
+    }
 
     // vTaskDelay((30 * 1000) / portTICK_PERIOD_MS);
 
@@ -108,7 +106,11 @@ void task_display_time(void* pvParameters) {
 
     // Use the configured hour format
     uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
-    Nixie_Display::get_instance().display_time(time_info, hour_format);
+
+    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      Nixie_Display::get_instance().display_time(time_info, hour_format);
+      xSemaphoreGive(Nixie_Display::display_mutex);
+    }
 
     vTaskDelay(45 / portTICK_PERIOD_MS);
   }
