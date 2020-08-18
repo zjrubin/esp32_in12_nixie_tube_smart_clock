@@ -60,6 +60,15 @@ class Nixie_Display {
 
   void display_slot_machine_cycle(struct tm* time_info);
 
+  // Get the current state of the dot separtors
+  uint8_t get_dot_separators() const { return m_dots; }
+
+  // Update the dot separators on the display, keeping all other digits the same
+  void set_dot_separators(uint8_t nixie_dots) {
+    m_dots = nixie_dots;
+    show();
+  }
+
   static SemaphoreHandle_t display_mutex;
 
  private:

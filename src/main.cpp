@@ -13,6 +13,7 @@
 #define DEBOUNCE_TIME_TICKS (DEBOUNCE_TIME_MS / portTICK_PERIOD_MS)
 volatile TickType_t previous_tick_count = 0;
 
+TaskHandle_t g_task_blink_dot_separators_handle = NULL;
 TaskHandle_t g_task_configure_handle = NULL;
 TaskHandle_t g_task_cycle_digit_handle = NULL;
 TaskHandle_t g_task_display_time_handle = NULL;
@@ -22,6 +23,7 @@ void task_display_time(void* pvParameters);
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
 void task_set_time_from_ntp(void* pvParameters);
+void task_blink_dot_separators(void* pvParameters);
 
 void rotary_encoder_switch_isr();
 
@@ -52,20 +54,19 @@ void setup() {
   // RTC Setup
   set_time_from_ntp();
 
-  // This task needs to come first since task_display_slot_machine_cyle
-  // needs its handle to suspend it
-  // TODO: have a mutex for accessing nixie_display to remove need of suspending
-  // tasks
-  xTaskCreate(task_display_time, "display_time", 4000, NULL, 0,
-              &g_task_display_time_handle);
+  xTaskCreate(task_blink_dot_separators, "blink_dot_separators", 2000, NULL, 5,
+              &g_task_blink_dot_separators_handle);
 
-  xTaskCreate(task_configure, "configure", 2000, NULL, 3,
+  xTaskCreate(task_configure, "configure", 2000, NULL, 4,
               &g_task_configure_handle);
 
   xTaskCreate(task_display_slot_machine_cycle, "slot_machine_cycle", 2000, NULL,
               3, NULL);
 
   xTaskCreate(task_set_time_from_ntp, "set_time_from_ntp", 5000, NULL, 2, NULL);
+
+  xTaskCreate(task_display_time, "display_time", 4000, NULL, 0,
+              &g_task_display_time_handle);
 
   // xTaskCreate(task_cycle_digit, "cycle_digit", 2000, NULL, 1,
   //             &g_task_cycle_digit_handle);
@@ -131,7 +132,9 @@ void task_display_time(void* pvParameters) {
 void task_configure(void* pvParameters) {
   for (;;) {
     if (xSemaphoreTake(g_semaphore_configure, portMAX_DELAY) == pdTRUE) {
+      vTaskResume(g_task_blink_dot_separators_handle);
       handle_configuration();
+      vTaskSuspend(g_task_blink_dot_separators_handle);
     }
   }
 }
@@ -143,6 +146,27 @@ void task_set_time_from_ntp(void* pvParameters) {
     vTaskDelay(15 * MINUTE_FREERTOS);
 
     set_time_from_ntp();
+  }
+}
+
+void task_blink_dot_separators(void* pvParameters) {
+  // Suspend by default. The configuration task will resume this task
+  vTaskSuspend(NULL);
+
+  for (;;) {
+    TickType_t previous_wake_time = xTaskGetTickCount();
+
+    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      uint8_t dot_separators =
+          Nixie_Display::get_instance().get_dot_separators();
+      dot_separators =
+          (dot_separators == NIXIE_DOTS_ALL) ? NIXIE_DOTS_NONE : NIXIE_DOTS_ALL;
+      Nixie_Display::get_instance().set_dot_separators(dot_separators);
+
+      xSemaphoreGive(Nixie_Display::display_mutex);
+    }
+
+    vTaskDelayUntil(&previous_wake_time, 1000 / portTICK_PERIOD_MS);
   }
 }
 
