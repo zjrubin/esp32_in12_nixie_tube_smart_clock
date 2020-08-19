@@ -121,8 +121,8 @@ void task_display_time(void* pvParameters) {
       xSemaphoreGive(Nixie_Display::display_mutex);
     }
 
-    // reset_watchdog_timer();
     // vTaskDelay(45 / portTICK_PERIOD_MS);
+    reset_watchdog_timer();
     vTaskDelayUntil(&previous_wake_time, 1000 / portTICK_PERIOD_MS);
   }
 }
@@ -142,9 +142,15 @@ void task_display_time(void* pvParameters) {
 void task_configure(void* pvParameters) {
   for (;;) {
     if (xSemaphoreTake(g_semaphore_configure, portMAX_DELAY) == pdTRUE) {
+      // Do not allow any other tasks to output to the display while
+      // configuration is taking place
+      xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY);
+
       vTaskResume(g_task_blink_dot_separators_handle);
       handle_configuration();
       vTaskSuspend(g_task_blink_dot_separators_handle);
+
+      xSemaphoreGive(Nixie_Display::display_mutex);
     }
   }
 }
@@ -163,18 +169,18 @@ void task_blink_dot_separators(void* pvParameters) {
   // Suspend by default. The configuration task will resume this task
   vTaskSuspend(NULL);
 
+  // Since this function is currently only resumed from the configuration task,
+  // it is unnecessary for this function to lock the display mutex.
+  // The configuration task already holds the display mutex and the
+  // configuration task does not modify the dot separators; It lets this task
+  // handle that...
   for (;;) {
     TickType_t previous_wake_time = xTaskGetTickCount();
 
-    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
-      uint8_t dot_separators =
-          Nixie_Display::get_instance().get_dot_separators();
-      dot_separators =
-          (dot_separators == NIXIE_DOTS_ALL) ? NIXIE_DOTS_NONE : NIXIE_DOTS_ALL;
-      Nixie_Display::get_instance().set_dot_separators(dot_separators);
-
-      xSemaphoreGive(Nixie_Display::display_mutex);
-    }
+    uint8_t dot_separators = Nixie_Display::get_instance().get_dot_separators();
+    dot_separators =
+        (dot_separators == NIXIE_DOTS_ALL) ? NIXIE_DOTS_NONE : NIXIE_DOTS_ALL;
+    Nixie_Display::get_instance().set_dot_separators(dot_separators);
 
     vTaskDelayUntil(&previous_wake_time, 1000 / portTICK_PERIOD_MS);
   }
