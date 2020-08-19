@@ -36,21 +36,75 @@ void Nixie_Display::setup_nixie_display() {
   display_mutex = xSemaphoreCreateMutex();
 }
 
-void Nixie_Display::display_time(const struct tm& time_info,
-                                 bool twelve_hour_format, uint8_t nixie_dots) {
-  uint8_t hours = time_info.tm_hour;
-  if (twelve_hour_format) {
-    hours = convert_24_hour_to_12_hour(hours);
+void Nixie_Display::smooth_display_time(const struct tm& current_time,
+                                        bool twelve_hour_format,
+                                        uint8_t nixie_dots) {
+  struct tm tmp_next_time = current_time;
+  tmp_next_time.tm_sec += 1;
+
+  // mktime automatically normalizes the time (i.e. increments higher minutes,
+  // hours, etc at 60 seconds)
+  time_t next_time_epoch = mktime(&tmp_next_time);
+  struct tm* next_time = localtime(&next_time_epoch);
+
+  uint8_t current_time_arr[num_display_digits];
+  // We need to create an intermediate time struct. If any digit changed
+  // from the current second to the next, that digit needs to fade to blank
+  // first before the new digit appears
+  uint8_t intermediate_blanked_arr[num_display_digits];
+  uint8_t next_time_arr[num_display_digits];
+
+  set_time_in_array(current_time_arr, current_time, twelve_hour_format);
+  set_time_in_array(intermediate_blanked_arr, *next_time, twelve_hour_format);
+  set_time_in_array(next_time_arr, *next_time, twelve_hour_format);
+
+  // Determine which digits changed from the current time to the next time,
+  // and thus need to be blanked
+  for (size_t i = 0; i < num_display_digits; ++i) {
+    if (current_time_arr[i] != next_time_arr[i]) {
+      intermediate_blanked_arr[i] = NIXIE_BLANK_POS;
+    }
   }
 
-  m_digits[0] = TENS(hours);
-  m_digits[1] = ONES(hours);
+  // The transition happens imperceptibly faster than 1 second.
+  // this ensures that the display time task can call vTaskDelayUntil
+  // and wake up exactly 1 second after it was initally called.
+  // This prevents time drift appearing on the display.
+  smooth_display_transition(current_time_arr, intermediate_blanked_arr,
+                            NIXIE_SMOOTH_TRANSITION_TIME_MS / 2);
+  smooth_display_transition(intermediate_blanked_arr, next_time_arr,
+                            NIXIE_SMOOTH_TRANSITION_TIME_MS / 2);
+}
 
-  m_digits[2] = TENS(time_info.tm_min);
-  m_digits[3] = ONES(time_info.tm_min);
+void Nixie_Display::smooth_display_transition(
+    const uint8_t current_digits[num_display_digits],
+    const uint8_t next_digits[num_display_digits], size_t transition_time_ms) {
+  size_t multiplex_count = 100;
+  double single_digit_transition_time =
+      transition_time_ms / (double)multiplex_count;
 
-  m_digits[4] = TENS(time_info.tm_sec);
-  m_digits[5] = ONES(time_info.tm_sec);
+  for (size_t i = 0; i < multiplex_count; ++i) {
+    double current_digit_display_proportion =
+        0.5 * (cos(PI * (i / (double)multiplex_count)) + 1);
+    double next_digit_display_proportion = 1 - current_digit_display_proportion;
+
+    memcpy(m_digits, current_digits, sizeof(m_digits));
+    show();
+    delayMicroseconds(
+        (current_digit_display_proportion * single_digit_transition_time) *
+        MILLISECOND_TO_MICROSECONDS);
+
+    memcpy(m_digits, next_digits, sizeof(m_digits));
+    show();
+    delayMicroseconds(
+        (next_digit_display_proportion * single_digit_transition_time) *
+        MILLISECOND_TO_MICROSECONDS);
+  }
+}
+
+void Nixie_Display::display_time(const struct tm& time_info,
+                                 bool twelve_hour_format, uint8_t nixie_dots) {
+  set_time_in_array(m_digits, time_info, twelve_hour_format);
 
   m_dots = nixie_dots;
 
@@ -111,4 +165,22 @@ void Nixie_Display::show() const {
   shiftOut(data_pin, clock_pin, MSBFIRST, m_dots);
 
   digitalWrite(latch_pin, HIGH);
+}
+
+void Nixie_Display::set_time_in_array(uint8_t array[num_display_digits],
+                                      const struct tm& time_info,
+                                      bool twelve_hour_format) {
+  uint8_t hours = time_info.tm_hour;
+  if (twelve_hour_format) {
+    hours = convert_24_hour_to_12_hour(hours);
+  }
+
+  array[0] = TENS(hours);
+  array[1] = ONES(hours);
+
+  array[2] = TENS(time_info.tm_min);
+  array[3] = ONES(time_info.tm_min);
+
+  array[4] = TENS(time_info.tm_sec);
+  array[5] = ONES(time_info.tm_sec);
 }

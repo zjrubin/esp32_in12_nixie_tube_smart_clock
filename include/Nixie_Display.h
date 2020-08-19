@@ -34,6 +34,8 @@
 #define NIXIE_BLANK_POS 10
 #define NIXIE_BLANK_DIGIT -1  // Digit that corresponds to a blank nixie display
 
+#define NIXIE_SMOOTH_TRANSITION_TIME_MS 980
+
 #define LEFT_DISPLAY(nixie_digit) (nixie_digit << 4)
 #define RIGHT_DISPLAY(nixie_digit) (nixie_digit)
 #define DUAL_DISPLAY(left_nixie_digit, right_nixie_digit) \
@@ -52,6 +54,11 @@ class Nixie_Display {
     static Nixie_Display n;
     return n;
   }
+
+  // Shift out the current time transitioning to the time 1 second from now
+  void smooth_display_time(const struct tm& current_time,
+                           bool twelve_hour_format = true,
+                           uint8_t nixie_dots = NIXIE_DOTS_ALL);
 
   void display_time(const struct tm& time_info, bool twelve_hour_format = true,
                     uint8_t nixie_dots = NIXIE_DOTS_ALL);
@@ -100,4 +107,12 @@ class Nixie_Display {
   static const size_t num_display_digits = 6;
   static uint8_t m_digits[num_display_digits];
   static uint8_t m_dots;
+
+  void smooth_display_transition(
+      const uint8_t current_digits[num_display_digits],
+      const uint8_t next_digits[num_display_digits], size_t transition_time_ms);
+
+  static void set_time_in_array(uint8_t array[num_display_digits],
+                                const struct tm& time_info,
+                                bool twelve_hour_format);
 };

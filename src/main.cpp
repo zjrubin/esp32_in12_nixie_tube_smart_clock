@@ -102,6 +102,8 @@ void task_display_slot_machine_cycle(void* pvParameters) {
 }
 
 void task_display_time(void* pvParameters) {
+  TickType_t previous_wake_time = xTaskGetTickCount();
+
   for (;;) {
     struct tm time_info;
     if (!getLocalTime(&time_info)) {
@@ -114,11 +116,14 @@ void task_display_time(void* pvParameters) {
     uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
 
     if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
-      Nixie_Display::get_instance().display_time(time_info, hour_format);
+      // Nixie_Display::get_instance().display_time(time_info, hour_format);
+      Nixie_Display::get_instance().smooth_display_time(time_info, hour_format);
       xSemaphoreGive(Nixie_Display::display_mutex);
     }
 
-    vTaskDelay(45 / portTICK_PERIOD_MS);
+    // reset_watchdog_timer();
+    // vTaskDelay(45 / portTICK_PERIOD_MS);
+    vTaskDelayUntil(&previous_wake_time, 1000 / portTICK_PERIOD_MS);
   }
 }
 
