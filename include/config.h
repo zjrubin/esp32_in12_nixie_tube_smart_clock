@@ -17,6 +17,11 @@
 #define EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_LOWER_BOUND 1
 #define EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_UPPER_BOUND 60
 
+// For 1 hour, the nixie display will cycle all of its digits very frequently.
+// By default, this period is scheduled for the early morning as to not be
+// inconvenient or distracting.
+#define MANDATORY_CATHODE_POISONING_PREVENTION_HOUR 3
+
 extern const int c_rotary_encoder_switch_pin;
 extern const int c_rotary_encoder_dt_pin;
 extern const int c_rotary_encoder_clk_pin;

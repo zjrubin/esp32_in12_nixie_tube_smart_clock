@@ -78,11 +78,11 @@ void loop() {}
 void task_display_slot_machine_cycle(void* pvParameters) {
   for (;;) {
     TickType_t previous_wake_time;
+    struct tm time_info;
 
     if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
       previous_wake_time = xTaskGetTickCount();
 
-      struct tm time_info;
       if (!getLocalTime(&time_info)) {
         debug_serial_println("Failed to obtain time");
         xSemaphoreGive(Nixie_Display::display_mutex);
@@ -101,8 +101,13 @@ void task_display_slot_machine_cycle(void* pvParameters) {
 
     uint8_t slot_machine_cycle_frequency =
         EEPROM.read(EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_ADDRESS);
-    vTaskDelayUntil(&previous_wake_time,
-                    slot_machine_cycle_frequency * MINUTE_FREERTOS);
+
+    TickType_t delay_length =
+        (time_info.tm_hour == MANDATORY_CATHODE_POISONING_PREVENTION_HOUR)
+            ? (30 * 1000 / portTICK_PERIOD_MS)
+            : (slot_machine_cycle_frequency * MINUTE_FREERTOS);
+
+    vTaskDelayUntil(&previous_wake_time, delay_length);
   }
 }
 
