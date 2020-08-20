@@ -77,19 +77,21 @@ void loop() {}
 
 void task_display_slot_machine_cycle(void* pvParameters) {
   for (;;) {
-    TickType_t previous_wake_time = xTaskGetTickCount();
-
-    struct tm time_info;
-    if (!getLocalTime(&time_info)) {
-      debug_serial_println("Failed to obtain time");
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
-      continue;
-    }
-
-    // Use the configured hour format
-    uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
+    TickType_t previous_wake_time;
 
     if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      previous_wake_time = xTaskGetTickCount();
+
+      struct tm time_info;
+      if (!getLocalTime(&time_info)) {
+        debug_serial_println("Failed to obtain time");
+        xSemaphoreGive(Nixie_Display::display_mutex);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        continue;
+      }
+
+      // Use the configured hour format
+      uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
       Nixie_Display::get_instance().display_slot_machine_cycle(time_info,
                                                                hour_format);
       xSemaphoreGive(Nixie_Display::display_mutex);
@@ -106,25 +108,29 @@ void task_display_slot_machine_cycle(void* pvParameters) {
 
 void task_display_time(void* pvParameters) {
   for (;;) {
-    // vTaskDelayUntil has an odd quirk in that it if the previous wake up time
-    // is initialized outside of the for(;;) loop and the task misses several
-    // instances where it should have woken up, FreeRTOS it will execute the
-    // task several times in a row to "catch up" for the times it missed its
-    // wakeups. This behavior can be suppressed by initializing the previous
-    // wake up time within the for(;;) loop on each iteration, as is done here.
-    TickType_t previous_wake_time = xTaskGetTickCount();
-
-    struct tm time_info;
-    if (!getLocalTime(&time_info)) {
-      debug_serial_println("Failed to obtain time");
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
-      continue;
-    }
-
-    // Use the configured hour format
-    uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
+    TickType_t previous_wake_time;
 
     if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      // vTaskDelayUntil has an odd quirk in that it if the previous wake up
+      // time is initialized outside of the for(;;) loop and the task misses
+      // several instances where it should have woken up, FreeRTOS it will
+      // execute the task several times in a row to "catch up" for the times it
+      // missed its wakeups. This behavior can be suppressed by initializing the
+      // previous wake up time within the for(;;) loop on each iteration, as is
+      // done here.
+      previous_wake_time = xTaskGetTickCount();
+
+      struct tm time_info;
+      if (!getLocalTime(&time_info)) {
+        debug_serial_println("Failed to obtain time");
+        xSemaphoreGive(Nixie_Display::display_mutex);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        continue;
+      }
+
+      // Use the configured hour format
+      uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
+
       // Nixie_Display::get_instance().display_time(time_info, hour_format);
       Nixie_Display::get_instance().smooth_display_time(time_info, hour_format);
       xSemaphoreGive(Nixie_Display::display_mutex);
