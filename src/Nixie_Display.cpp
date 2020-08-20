@@ -39,13 +39,8 @@ void Nixie_Display::setup_nixie_display() {
 void Nixie_Display::smooth_display_time(const struct tm& current_time,
                                         bool twelve_hour_format,
                                         uint8_t nixie_dots) {
-  struct tm tmp_next_time = current_time;
-  tmp_next_time.tm_sec += 1;
-
-  // mktime automatically normalizes the time (i.e. increments higher minutes,
-  // hours, etc at 60 seconds)
-  time_t next_time_epoch = mktime(&tmp_next_time);
-  struct tm* next_time = localtime(&next_time_epoch);
+  struct tm next_time;
+  get_offset_time(&next_time, current_time, 1);
 
   uint8_t current_time_arr[num_display_digits];
   // We need to create an intermediate time struct. If any digit changed
@@ -55,8 +50,8 @@ void Nixie_Display::smooth_display_time(const struct tm& current_time,
   uint8_t next_time_arr[num_display_digits];
 
   set_time_in_array(current_time_arr, current_time, twelve_hour_format);
-  set_time_in_array(intermediate_blanked_arr, *next_time, twelve_hour_format);
-  set_time_in_array(next_time_arr, *next_time, twelve_hour_format);
+  set_time_in_array(intermediate_blanked_arr, next_time, twelve_hour_format);
+  set_time_in_array(next_time_arr, next_time, twelve_hour_format);
 
   // Determine which digits changed from the current time to the next time,
   // and thus need to be blanked
@@ -130,26 +125,58 @@ void Nixie_Display::display_config_value(uint8_t option_number, uint8_t value) {
   show();
 }
 
-void Nixie_Display::display_slot_machine_cycle(struct tm* time_info) {
+void Nixie_Display::display_slot_machine_cycle(const struct tm& current_time,
+                                               bool twelve_hour_format) {
   static const int slot_machine_cycle_duration = 7;  // In seconds
-  static const size_t slot_machine_cycle_duration_milliseconds =
-      1000 * 1000 * slot_machine_cycle_duration;
+  static const int slot_machine_num_phases = 10;
+  const double slot_machine_phase_duration_ms =
+      (slot_machine_cycle_duration * 1000) / (double)slot_machine_num_phases;
 
-  time_t time = mktime(time_info);
-  time += slot_machine_cycle_duration;
-  // struct tm* end_time = localtime(&time);
+  struct tm end_time;
+  get_offset_time(&end_time, current_time, slot_machine_cycle_duration);
 
-  static const int for_loop_iterations = 100;
-  static const int iteration_duration =
-      slot_machine_cycle_duration_milliseconds / for_loop_iterations;
-
-  for (int i = 0; i < for_loop_iterations; ++i) {
-    for (size_t j = 0; j < num_display_digits; ++j) {
-      m_digits[j] = (m_digits[j] + 1) % 10;
-    }
-    show();
+  for (size_t i = slot_machine_num_phases; i > 0; --i) {
+    slot_machine_cycle_phase(end_time, i, slot_machine_phase_duration_ms,
+                             twelve_hour_format);
     reset_watchdog_timer();
-    delayMicroseconds(iteration_duration);
+  }
+}
+
+void Nixie_Display::slot_machine_cycle_phase(const struct tm& end_time,
+                                             int num_cycling_digits,
+                                             double phase_ms,
+                                             bool twelve_hour_format) {
+  // Show the time where the display is supposed to end.
+  // This will lock in place the digits that are no longer cycling.
+  // The digits that are still cycling will quickly be updated so that the
+  // current time isn't seen
+  set_time_in_array(m_digits, end_time, twelve_hour_format);
+  show();
+
+  static const int num_iterations = 10;
+  const double iteration_duration_us =
+      (phase_ms / (double)num_iterations) * 1000;
+
+  for (size_t i = 0; i < num_iterations; ++i) {
+    // The cascade behavior of this switch statement is desired here
+    switch (num_cycling_digits) {
+      default:  // Any number larger than 6 automatically cycles all digits
+      case 6:
+        m_digits[0] = CYCLE(m_digits[0]);
+      case 5:
+        m_digits[1] = CYCLE(m_digits[1]);
+      case 4:
+        m_digits[2] = CYCLE(m_digits[2]);
+      case 3:
+        m_digits[3] = CYCLE(m_digits[3]);
+      case 2:
+        m_digits[4] = CYCLE(m_digits[4]);
+      case 1:
+        m_digits[5] = CYCLE(m_digits[5]);
+    }
+
+    show();
+    delayMicroseconds(iteration_duration_us);
   }
 }
 
@@ -185,4 +212,17 @@ void Nixie_Display::set_time_in_array(uint8_t array[num_display_digits],
 
   array[4] = TENS(time_info.tm_sec);
   array[5] = ONES(time_info.tm_sec);
+}
+
+void Nixie_Display::get_offset_time(struct tm* offset_time,
+                                    const struct tm& current_time,
+                                    int time_delta) {
+  *offset_time = current_time;
+  offset_time->tm_sec += time_delta;
+
+  // mktime automatically normalizes the time (i.e. increments higher minutes,
+  // hours, etc at 60 seconds)
+  time_t next_time_epoch = mktime(offset_time);
+
+  localtime_r(&next_time_epoch, offset_time);
 }

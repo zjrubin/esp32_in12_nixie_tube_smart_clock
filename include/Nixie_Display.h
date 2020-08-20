@@ -11,6 +11,8 @@
 #define HUNDREDS(x) (x / 100) % 10
 #define THOUSANDS(x) (x / 1000) % 10
 
+#define CYCLE(x) (x + 1) % 10
+
 #define NIXIE_ZERO 0b0000
 #define NIXIE_ONE 0b1000
 #define NIXIE_TWO 0b0100
@@ -65,7 +67,8 @@ class Nixie_Display {
 
   void display_config_value(uint8_t option_number, uint8_t value);
 
-  void display_slot_machine_cycle(struct tm* time_info);
+  void display_slot_machine_cycle(const struct tm& current_time,
+                                  bool twelve_hour_format = true);
 
   // Get the current state of the dot separtors
   uint8_t get_dot_separators() const { return m_dots; }
@@ -112,7 +115,14 @@ class Nixie_Display {
       const uint8_t current_digits[num_display_digits],
       const uint8_t next_digits[num_display_digits], size_t transition_time_ms);
 
+  void slot_machine_cycle_phase(const struct tm& end_time,
+                                int num_cycling_digits, double phase_ms,
+                                bool twelve_hour_format);
+
   static void set_time_in_array(uint8_t array[num_display_digits],
                                 const struct tm& time_info,
                                 bool twelve_hour_format);
+
+  static void get_offset_time(struct tm* offset_time,
+                              const struct tm& current_time, int time_delta);
 };

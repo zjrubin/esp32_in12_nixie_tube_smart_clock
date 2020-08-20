@@ -80,15 +80,18 @@ void task_display_slot_machine_cycle(void* pvParameters) {
     TickType_t previous_wake_time = xTaskGetTickCount();
 
     struct tm time_info;
-    memset(&time_info, 0, sizeof(time_info));
-    // if (!getLocalTime(&time_info)) {
-    //   debug_serial_println("Failed to obtain time");
-    //   vTaskDelay(1000 / portTICK_PERIOD_MS);
-    //   continue;
-    // }
+    if (!getLocalTime(&time_info)) {
+      debug_serial_println("Failed to obtain time");
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+      continue;
+    }
+
+    // Use the configured hour format
+    uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
 
     if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
-      Nixie_Display::get_instance().display_slot_machine_cycle(&time_info);
+      Nixie_Display::get_instance().display_slot_machine_cycle(time_info,
+                                                               hour_format);
       xSemaphoreGive(Nixie_Display::display_mutex);
     }
 
