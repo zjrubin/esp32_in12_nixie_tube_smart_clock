@@ -66,6 +66,8 @@ void Nixie_Display::smooth_display_time(const struct tm& current_time,
     }
   }
 
+  m_dots = nixie_dots;
+
   // The transition happens imperceptibly faster than 1 second.
   // this ensures that the display time task can call vTaskDelayUntil
   // and wake up exactly 1 second after it was initally called.
