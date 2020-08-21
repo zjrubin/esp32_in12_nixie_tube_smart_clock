@@ -14,7 +14,7 @@
 
 #define EEPROM_DATE_DISPLAY_FREQUENCY_ADDRESS 2
 #define EEPROM_DATE_DISPLAY_FREQUENCY_DEFAULT 5
-#define EEPROM_DATE_DISPLAY_FREQUENCY_LOWER_BOUND 1
+#define EEPROM_DATE_DISPLAY_FREQUENCY_LOWER_BOUND 0
 #define EEPROM_DATE_DISPLAY_FREQUENCY_UPPER_BOUND 99
 
 #define EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_ADDRESS 3
@@ -47,4 +47,5 @@ typedef struct {
   uint8_t initial_value;
   uint8_t lower_bound;
   uint8_t upper_bound;
+  TaskHandle_t *task_handle;
 } eeprom_option_t;

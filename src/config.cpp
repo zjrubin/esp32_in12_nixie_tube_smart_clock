@@ -7,6 +7,7 @@
 #include "arduino_debug.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "tasks.h"
 #include "util.h"
 
 const int c_rotary_encoder_switch_pin = 16;
@@ -14,23 +15,30 @@ const int c_rotary_encoder_dt_pin = 17;
 const int c_rotary_encoder_clk_pin = 5;
 
 static const eeprom_option_t c_eeprom_options[] = {
+    // A NULL value for task_handle means that config will disallow vTaskSuspend
+    // and vTaskResume and treat all values as potential config values.
+    // A non-NULL task_handle will allow config to suspend the task if the
+    // entered value is zero and enable the task if the entered value is
+    // non-zero
     {EEPROM_12_HOUR_FORMAT_ADDRESS, EEPROM_12_HOUR_FORMAT_DEFAULT,
-     EEPROM_12_HOUR_FORMAT_LOWER_BOUND, EEPROM_12_HOUR_FORMAT_UPPER_BOUND},
+     EEPROM_12_HOUR_FORMAT_LOWER_BOUND, EEPROM_12_HOUR_FORMAT_UPPER_BOUND,
+     NULL},
     {EEPROM_DATE_DISPLAY_FREQUENCY_ADDRESS,
      EEPROM_DATE_DISPLAY_FREQUENCY_DEFAULT,
      EEPROM_DATE_DISPLAY_FREQUENCY_LOWER_BOUND,
-     EEPROM_DATE_DISPLAY_FREQUENCY_UPPER_BOUND},
+     EEPROM_DATE_DISPLAY_FREQUENCY_UPPER_BOUND, &g_task_display_date_handle},
     {EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_ADDRESS,
      EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_DEFAULT,
      EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_LOWER_BOUND,
-     EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_UPPER_BOUND},
+     EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_UPPER_BOUND, NULL},
 };
 
 SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
 
 static void set_eeprom_config_value(uint8_t option_number,
                                     uint8_t initial_value, uint8_t lower_bound,
-                                    uint8_t upper_bound);
+                                    uint8_t upper_bound,
+                                    TaskHandle_t *task_handle);
 
 void setup_eeprom() {
   EEPROM.begin(EEPROM_SIZE);
@@ -86,19 +94,26 @@ void handle_configuration() {
   for (size_t i = 0; i < NUM_ELEMENTS(c_eeprom_options); ++i) {
     set_eeprom_config_value(
         c_eeprom_options[i].option_number, c_eeprom_options[i].initial_value,
-        c_eeprom_options[i].lower_bound, c_eeprom_options[i].upper_bound);
+        c_eeprom_options[i].lower_bound, c_eeprom_options[i].upper_bound,
+        c_eeprom_options[i].task_handle);
   }
   EEPROM.commit();  // Still need to commit the changes
 }
 
 static void set_eeprom_config_value(uint8_t option_number,
                                     uint8_t initial_value, uint8_t lower_bound,
-                                    uint8_t upper_bound) {
+                                    uint8_t upper_bound,
+                                    TaskHandle_t *task_handle) {
   uint8_t config_value = EEPROM.read(option_number);
   debug_serial_printf("\tCurrent option: %d value: %d\n", option_number,
                       config_value);
   config_value =
       get_config_value(option_number, config_value, lower_bound, upper_bound);
+
+  if (task_handle) {
+    config_value ? vTaskResume(*task_handle) : vTaskSuspend(*task_handle);
+  }
+
   debug_serial_printf("\tStoring option: %d value: %d\n", option_number,
                       config_value);
   EEPROM.write(option_number, config_value);

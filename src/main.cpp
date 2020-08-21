@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "ntp.h"
+#include "tasks.h"
 #include "util.h"
 
 #define DEBOUNCE_TIME_MS 200
@@ -15,8 +16,8 @@ volatile TickType_t previous_tick_count = 0;
 
 TaskHandle_t g_task_blink_dot_separators_handle = NULL;
 TaskHandle_t g_task_configure_handle = NULL;
-TaskHandle_t g_task_cycle_digit_handle = NULL;
 TaskHandle_t g_task_display_time_handle = NULL;
+TaskHandle_t g_task_display_date_handle = NULL;
 
 void task_display_slot_machine_cycle(void* pvParameters);
 void task_display_time(void* pvParameters);
@@ -66,7 +67,8 @@ void setup() {
 
   xTaskCreate(task_set_time_from_ntp, "set_time_from_ntp", 5000, NULL, 2, NULL);
 
-  xTaskCreate(task_display_date, "display_date", 2000, NULL, 1, NULL);
+  xTaskCreate(task_display_date, "display_date", 2000, NULL, 1,
+              &g_task_display_date_handle);
 
   xTaskCreate(task_display_time, "display_time", 4000, NULL, 0,
               &g_task_display_time_handle);
@@ -152,6 +154,14 @@ void task_display_date(void* pvParameters) {
   // the time display should be seen. To prevent this task from preempting
   // those task, sleep this task when it first starts
   vTaskDelay(15 * 1000 / portTICK_PERIOD_MS);
+
+  // Since this task can be suspended during configuration if a value of zero
+  // is entered for EEPROM_DATE_DISPLAY_FREQUENCY, we need to make sure
+  // this task suspends itself if zero is set. Otherwise, we will be calling
+  // vTaskDelayUntil with a 0 tick delay
+  if (!EEPROM.read(EEPROM_DATE_DISPLAY_FREQUENCY_ADDRESS)) {
+    vTaskSuspend(NULL);
+  }
 
   for (;;) {
     TickType_t previous_wake_time;
