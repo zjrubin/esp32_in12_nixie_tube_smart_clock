@@ -171,10 +171,11 @@ void task_display_date(void* pvParameters) {
       xSemaphoreGive(Nixie_Display::display_mutex);
     }
 
-    // Use the configured hour format
-    // uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
+    uint8_t date_display_frequency =
+        EEPROM.read(EEPROM_DATE_DISPLAY_FREQUENCY_ADDRESS);
 
-    vTaskDelayUntil(&previous_wake_time, 5 * MINUTE_FREERTOS);
+    vTaskDelayUntil(&previous_wake_time,
+                    date_display_frequency * MINUTE_FREERTOS);
   }
 }
 
