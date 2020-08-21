@@ -20,6 +20,7 @@ TaskHandle_t g_task_display_time_handle = NULL;
 
 void task_display_slot_machine_cycle(void* pvParameters);
 void task_display_time(void* pvParameters);
+void task_display_date(void* pvParameters);
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
 void task_set_time_from_ntp(void* pvParameters);
@@ -65,11 +66,10 @@ void setup() {
 
   xTaskCreate(task_set_time_from_ntp, "set_time_from_ntp", 5000, NULL, 2, NULL);
 
+  xTaskCreate(task_display_date, "display_date", 2000, NULL, 1, NULL);
+
   xTaskCreate(task_display_time, "display_time", 4000, NULL, 0,
               &g_task_display_time_handle);
-
-  // xTaskCreate(task_cycle_digit, "cycle_digit", 2000, NULL, 1,
-  //             &g_task_cycle_digit_handle);
 }
 
 // Idle task
@@ -147,17 +147,36 @@ void task_display_time(void* pvParameters) {
   }
 }
 
-// void task_cycle_digit(void* pvParameters) {
-//   for (;;) {
-//     for (size_t i = 0; i < NUM_NIXIE_DIGITS; ++i) {
-//       smooth_transition_nixie_digit((i + 1) % NUM_NIXIE_DIGITS, i, 1000);
-//       // shift_out_nixie_digit(i);
-//       // delay(500);
-//       digitalWrite(c_upper_left_dot, !digitalRead(c_upper_left_dot));
-//       vTaskDelay(1);
-//     }
-//   }
-// }
+void task_display_date(void* pvParameters) {
+  // Upon startup or reset of the clock, the slot machine transition into
+  // the time display should be seen. To prevent this task from preempting
+  // those task, sleep this task when it first starts
+  vTaskDelay(15 * 1000 / portTICK_PERIOD_MS);
+
+  for (;;) {
+    TickType_t previous_wake_time;
+    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      previous_wake_time = xTaskGetTickCount();
+
+      struct tm time_info;
+      if (!getLocalTime(&time_info)) {
+        debug_serial_println("Failed to obtain time");
+        xSemaphoreGive(Nixie_Display::display_mutex);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        continue;
+      }
+
+      Nixie_Display::get_instance().display_date(time_info);
+      vTaskDelay(8 * 1000 / portTICK_PERIOD_MS);  // Keep date on display
+      xSemaphoreGive(Nixie_Display::display_mutex);
+    }
+
+    // Use the configured hour format
+    // uint8_t hour_format = EEPROM.read(EEPROM_12_HOUR_FORMAT_ADDRESS);
+
+    vTaskDelayUntil(&previous_wake_time, 5 * MINUTE_FREERTOS);
+  }
+}
 
 void task_configure(void* pvParameters) {
   for (;;) {

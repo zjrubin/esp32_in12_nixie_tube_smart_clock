@@ -29,8 +29,8 @@
 #define NIXIE_DOTS_ALL 0b1111
 #define NIXIE_DOTS_LEFT 0b1100
 #define NIXIE_DOTS_RIGHT 0b0011
-#define NIXIE_DOTS_TOP 0b1010
-#define NIXIE_DOTS_BOTTOM 0b0101
+#define NIXIE_DOTS_TOP 0b0101
+#define NIXIE_DOTS_BOTTOM 0b1010
 
 #define NUM_NIXIE_DIGITS 10
 #define NIXIE_BLANK_POS 10
@@ -64,6 +64,9 @@ class Nixie_Display {
 
   void display_time(const struct tm& time_info, bool twelve_hour_format = true,
                     uint8_t nixie_dots = NIXIE_DOTS_ALL);
+
+  void display_date(const struct tm& time_info,
+                    uint8_t nixie_dots = NIXIE_DOTS_BOTTOM);
 
   void display_config_value(uint8_t option_number, uint8_t value);
 

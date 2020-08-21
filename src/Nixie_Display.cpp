@@ -108,6 +108,23 @@ void Nixie_Display::display_time(const struct tm& time_info,
   show();
 }
 
+void Nixie_Display::display_date(const struct tm& time_info,
+                                 uint8_t nixie_dots) {
+  int month = time_info.tm_mon + 1;  // tm_month starts at 0
+  m_digits[0] = TENS(month);
+  m_digits[1] = ONES(month);
+
+  m_digits[2] = TENS(time_info.tm_mday);
+  m_digits[3] = ONES(time_info.tm_mday);
+
+  m_digits[4] = TENS(time_info.tm_year);
+  m_digits[5] = ONES(time_info.tm_year);
+
+  m_dots = nixie_dots;
+
+  show();
+}
+
 void Nixie_Display::display_config_value(uint8_t option_number, uint8_t value) {
   m_digits[0] = TENS(option_number);
   m_digits[1] = ONES(option_number);
