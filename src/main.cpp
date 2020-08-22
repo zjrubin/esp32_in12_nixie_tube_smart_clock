@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "ntp.h"
+#include "special_modes.h"
 #include "tasks.h"
 #include "util.h"
 
@@ -14,8 +15,9 @@
 #define DEBOUNCE_TIME_TICKS (DEBOUNCE_TIME_MS / portTICK_PERIOD_MS)
 volatile TickType_t previous_tick_count = 0;
 
-TaskHandle_t g_task_blink_dot_separators_handle = NULL;
+TaskHandle_t g_task_special_modes_handle = NULL;
 TaskHandle_t g_task_configure_handle = NULL;
+TaskHandle_t g_task_blink_dot_separators_handle = NULL;
 TaskHandle_t g_task_display_time_handle = NULL;
 TaskHandle_t g_task_display_date_handle = NULL;
 
@@ -24,6 +26,7 @@ void task_display_time(void* pvParameters);
 void task_display_date(void* pvParameters);
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
+void task_special_modes(void* pvParameters);
 void task_set_time_from_ntp(void* pvParameters);
 void task_blink_dot_separators(void* pvParameters);
 
@@ -61,6 +64,9 @@ void setup() {
 
   xTaskCreate(task_configure, "configure", 2000, NULL, 4,
               &g_task_configure_handle);
+
+  xTaskCreate(task_special_modes, "special_modes", 2000, NULL, 3,
+              &g_task_special_modes_handle);
 
   xTaskCreate(task_display_slot_machine_cycle, "slot_machine_cycle", 2000, NULL,
               3, NULL);
@@ -200,6 +206,38 @@ void task_configure(void* pvParameters) {
       handle_configuration();
       vTaskSuspend(g_task_blink_dot_separators_handle);
 
+      xSemaphoreGive(Nixie_Display::display_mutex);
+    }
+  }
+}
+
+void task_special_modes(void* pvParameters) {
+  for (;;) {
+    vTaskSuspend(NULL);
+
+    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      // We need to suspend the configuration task so that it doesn't
+      // interfere with g_semaphore_configure while one of the special modes
+      // is receiving input
+      vTaskSuspend(g_task_configure_handle);
+
+      uint8_t eeprom_special_mode = EEPROM.read(EEPROM_SPECIAL_MODES_ADDRESS);
+
+      // Set the config value back to zero to resume normal clock operation
+      // Once the special mode is done
+      EEPROM.write(EEPROM_SPECIAL_MODES_ADDRESS, 0);
+      EEPROM.commit();
+
+      switch (eeprom_special_mode) {
+        case 1:
+          timer_mode();
+          break;
+
+        default:
+          break;
+      }
+
+      vTaskResume(g_task_configure_handle);
       xSemaphoreGive(Nixie_Display::display_mutex);
     }
   }

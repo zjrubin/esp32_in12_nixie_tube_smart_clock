@@ -142,6 +142,41 @@ void Nixie_Display::display_config_value(uint8_t option_number, uint8_t value) {
   show();
 }
 
+void Nixie_Display::display_timer_select(uint8_t digit_pair_pos,
+                                         uint8_t value) {
+  // digit_pair_pos: 0 == HOURS, 1 == MINTUES, 2 == SECONDS
+
+  size_t left_digit = 0;
+  size_t right_digit = 0;
+
+  // Keep all the other digits the same
+  switch (digit_pair_pos) {
+    case 0:  // HOURS
+      left_digit = 0;
+      right_digit = 1;
+      break;
+
+    case 1:  // MINUTES
+      left_digit = 2;
+      right_digit = 3;
+      break;
+
+    case 2:  // SECONDS
+      left_digit = 4;
+      right_digit = 5;
+      break;
+
+    default:
+      break;
+  }
+
+  uint8_t value_tens = TENS(value);
+  m_digits[left_digit] = value_tens == 0 ? NIXIE_BLANK_POS : value_tens;
+  m_digits[right_digit] = ONES(value);
+
+  show();
+}
+
 void Nixie_Display::display_slot_machine_cycle(const struct tm& current_time,
                                                bool twelve_hour_format) {
   static const int slot_machine_cycle_duration = 7;  // In seconds
@@ -157,6 +192,22 @@ void Nixie_Display::display_slot_machine_cycle(const struct tm& current_time,
                              twelve_hour_format);
     reset_watchdog_timer();
   }
+}
+
+void Nixie_Display::display_value(uint8_t hours, uint8_t minutes,
+                                  uint8_t seconds, uint8_t nixie_dots) {
+  m_digits[0] = TENS(hours);
+  m_digits[1] = ONES(hours);
+
+  m_digits[2] = TENS(minutes);
+  m_digits[3] = ONES(minutes);
+
+  m_digits[4] = TENS(seconds);
+  m_digits[5] = ONES(seconds);
+
+  m_dots = nixie_dots;
+
+  show();
 }
 
 void Nixie_Display::slot_machine_cycle_phase(const struct tm& end_time,

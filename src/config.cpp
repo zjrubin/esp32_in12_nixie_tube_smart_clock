@@ -31,6 +31,9 @@ static const eeprom_option_t c_eeprom_options[] = {
      EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_DEFAULT,
      EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_LOWER_BOUND,
      EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_UPPER_BOUND, NULL},
+    {EEPROM_SPECIAL_MODES_ADDRESS, EEPROM_SPECIAL_MODES_DEFAULT,
+     EEPROM_SPECIAL_MODES_LOWER_BOUND, EEPROM_SPECIAL_MODES_UPPER_BOUND,
+     &g_task_special_modes_handle},
 };
 
 SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
@@ -108,7 +111,8 @@ static void set_eeprom_config_value(uint8_t option_number,
   debug_serial_printf("\tCurrent option: %d value: %d\n", option_number,
                       config_value);
   config_value =
-      get_config_value(option_number, config_value, lower_bound, upper_bound);
+      get_config_value(option_number, config_value, lower_bound, upper_bound,
+                       &Nixie_Display::display_config_value);
 
   if (task_handle) {
     config_value ? vTaskResume(*task_handle) : vTaskSuspend(*task_handle);
@@ -120,7 +124,9 @@ static void set_eeprom_config_value(uint8_t option_number,
 }
 
 uint8_t get_config_value(uint8_t option_number, uint8_t initial_value,
-                         uint8_t lower_bound, uint8_t upper_bound) {
+                         uint8_t lower_bound, uint8_t upper_bound,
+                         void (Nixie_Display::*display_handler)(uint8_t,
+                                                                uint8_t)) {
   uint16_t state = 0;
   int counter = initial_value;
 
@@ -155,7 +161,7 @@ uint8_t get_config_value(uint8_t option_number, uint8_t initial_value,
       debug_serial_println(counter);
     }
 
-    Nixie_Display::get_instance().display_config_value(option_number, counter);
+    (Nixie_Display::get_instance().*display_handler)(option_number, counter);
 
     // Poll the semaphore to see if the encoder switch was pressed
     if (xSemaphoreTake(g_semaphore_configure, 0) == pdTRUE) {

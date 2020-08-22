@@ -70,8 +70,13 @@ class Nixie_Display {
 
   void display_config_value(uint8_t option_number, uint8_t value);
 
+  void display_timer_select(uint8_t digit_pair_pos, uint8_t value);
+
   void display_slot_machine_cycle(const struct tm& current_time,
                                   bool twelve_hour_format = true);
+
+  void display_value(uint8_t hours, uint8_t minutes, uint8_t seconds,
+                     uint8_t nixie_dots = NIXIE_DOTS_ALL);
 
   // Get the current state of the dot separtors
   uint8_t get_dot_separators() const { return m_dots; }
@@ -81,6 +86,9 @@ class Nixie_Display {
     m_dots = nixie_dots;
     show();
   }
+
+  static void get_offset_time(struct tm* offset_time,
+                              const struct tm& current_time, int time_delta);
 
   static SemaphoreHandle_t display_mutex;
 
@@ -125,7 +133,4 @@ class Nixie_Display {
   static void set_time_in_array(uint8_t array[num_display_digits],
                                 const struct tm& time_info,
                                 bool twelve_hour_format);
-
-  static void get_offset_time(struct tm* offset_time,
-                              const struct tm& current_time, int time_delta);
 };

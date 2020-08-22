@@ -3,6 +3,8 @@
 #include <FreeRTOS.h>
 #include <stdint.h>
 
+class Nixie_Display;
+
 #define EEPROM_SIZE 10
 #define EEPROM_SENTINEL_ADDRESS 0
 #define EEPROM_INITIALIZED 1
@@ -22,6 +24,11 @@
 #define EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_LOWER_BOUND 1
 #define EEPROM_SLOT_MACHINE_CYCLE_FREQUENCY_UPPER_BOUND 60
 
+#define EEPROM_SPECIAL_MODES_ADDRESS 4
+#define EEPROM_SPECIAL_MODES_DEFAULT 0
+#define EEPROM_SPECIAL_MODES_LOWER_BOUND 0
+#define EEPROM_SPECIAL_MODES_UPPER_BOUND 1
+
 // For 1 hour, the nixie display will cycle all of its digits very frequently.
 // By default, this period is scheduled for the early morning as to not be
 // inconvenient or distracting.
@@ -40,7 +47,9 @@ void default_initialize_config_values(bool force = false);
 void handle_configuration();
 
 uint8_t get_config_value(uint8_t option_number, uint8_t initial_value,
-                         uint8_t lower_bound, uint8_t upper_bound);
+                         uint8_t lower_bound, uint8_t upper_bound,
+                         void (Nixie_Display::*display_handler)(uint8_t,
+                                                                uint8_t));
 
 typedef struct {
   uint8_t option_number;
