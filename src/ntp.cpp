@@ -6,8 +6,9 @@
 #include "arduino_debug.h"
 #include "time.h"
 
-const char* const c_wifi_ssid = "YOUR_WIFI_SSID";
-const char* const c_wifi_password = "YOUR_WIFI_PASSWORD";
+// const char* const c_wifi_ssid = "WRONG SSID";
+const char* const c_wifi_ssid = "Home Network";
+const char* const c_wifi_password = "k38had53";
 const char* const c_ntp_server = "pool.ntp.org";
 const long int c_gmt_offset_sec = -18000;
 const int c_daylight_offset_sec = 3600;
@@ -48,7 +49,7 @@ void set_time_from_ntp() {
   bool ntp_time_configured = false;
   for (int i = 1; i <= 30; ++i) {
     configTime(c_gmt_offset_sec, c_daylight_offset_sec, c_ntp_server);
-    vTaskDelay((250 * i) / portTICK_PERIOD_MS);  // Linear backoff
+    vTaskDelay((1000 * i) / portTICK_PERIOD_MS);  // Linear backoff
 
     if (print_local_time() == NTP_OK) {
       ntp_time_configured = true;
