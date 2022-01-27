@@ -77,3 +77,5 @@ void timer_mode() {
     vTaskDelay(buzzer_cycle_delay_ms / portTICK_PERIOD_MS);
   }
 }
+
+void nixie_saver_mode() {}

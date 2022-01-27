@@ -78,7 +78,7 @@ void default_initialize_config_values(bool force) {
     EEPROM.commit();
   }
 
-  if (ARDUINO_DEBUG) {
+  if (DEBUG_TEST) {
     // Print out the value of each EEPROM address
     Serial.println("EEPROM default initialised");
     Serial.println("\tAddress: value");
