@@ -4,10 +4,9 @@
 #include <WiFi.h>
 
 #include "arduino_debug.h"
+#include "credentials.h"
 #include "time.h"
 
-const char* const c_wifi_ssid = "YOUR_WIFI_SSID";
-const char* const c_wifi_password = "YOUR_WIFI_PASSWORD";
 const char* const c_ntp_server = "pool.ntp.org";
 const long int c_gmt_offset_sec = -18000;
 const int c_daylight_offset_sec = 3600;
