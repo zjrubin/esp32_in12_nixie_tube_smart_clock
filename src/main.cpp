@@ -36,6 +36,9 @@ void setup() {
   // Nixie display setup
   Nixie_Display::setup_nixie_display();
 
+  // Zero the display
+  Nixie_Display::get_instance().display_value(0, 0, 0, NIXIE_DOTS_ALL);
+
   // Rotary encode setup
   pinMode(c_rotary_encoder_switch_pin, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(c_rotary_encoder_switch_pin),
