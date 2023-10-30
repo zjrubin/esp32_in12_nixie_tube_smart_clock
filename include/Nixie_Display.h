@@ -31,8 +31,12 @@
 #define NIXIE_DOTS_RIGHT 0b0011
 #define NIXIE_DOTS_TOP 0b0101
 #define NIXIE_DOTS_BOTTOM 0b1010
+#define NIXIE_DOTS_TOP_LEFT 0b0001
+#define NIXIE_DOTS_TOP_RIGHT 0b0100
+#define NIXIE_DOTS_BOTTOM_LEFT 0b0010
+#define NIXIE_DOTS_BOTTOM_RIGHT 0b1000
 
-#define NUM_NIXIE_DIGITS 10
+#define NUM_NIXIE_DIGITS 11
 #define NIXIE_BLANK_POS 10
 #define NIXIE_BLANK_DIGIT -1  // Digit that corresponds to a blank nixie display
 
@@ -56,6 +60,14 @@ class Nixie_Display {
     static Nixie_Display n;
     return n;
   }
+
+  static const size_t num_display_digits = 6;
+
+  // Transition from whatever is currently on the display to the new value
+  void smooth_display_value(size_t transition_time_ms, int8_t hours,
+                            int8_t minutes, int8_t seconds,
+                            uint8_t nixie_dots = NIXIE_DOTS_ALL,
+                            bool blank_all = true);
 
   // Shift out the current time transitioning to the time 1 second from now
   void smooth_display_time(const struct tm& current_time,
@@ -87,8 +99,16 @@ class Nixie_Display {
     show();
   }
 
+  // Get the digits and dots that are currently being displayed
+  void get_current_display(uint8_t* hours, uint8_t* minutes, uint8_t* seconds,
+                           uint8_t* dots) const;
+
   static void get_offset_time(struct tm* offset_time,
                               const struct tm& current_time, int time_delta);
+
+  static void set_digit_array_from_value(
+      uint8_t digit_array[num_display_digits], int8_t hours, int8_t minutes,
+      int8_t seconds);
 
   static SemaphoreHandle_t display_mutex;
 
@@ -111,20 +131,19 @@ class Nixie_Display {
   Nixie_Display& operator=(Nixie_Display&&) = delete;
 
   static const uint8_t nixie_digits[];
-  static const uint8_t nixie_dots[];
 
   static const int clock_pin;
   static const int latch_pin;
   static const int output_enable_pin;
   static const int data_pin;
 
-  static const size_t num_display_digits = 6;
   static uint8_t m_digits[num_display_digits];
   static uint8_t m_dots;
 
   void smooth_display_transition(
       const uint8_t current_digits[num_display_digits],
-      const uint8_t next_digits[num_display_digits], size_t transition_time_ms);
+      const uint8_t next_digits[num_display_digits], uint8_t current_nixie_dots,
+      uint8_t next_nixie_dots, size_t transition_time_ms);
 
   void slot_machine_cycle_phase(const struct tm& end_time,
                                 int num_cycling_digits, double phase_ms,
