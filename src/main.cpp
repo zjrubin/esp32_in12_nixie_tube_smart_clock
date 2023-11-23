@@ -62,21 +62,22 @@ void setup() {
   // RTC Setup
   set_time_from_ntp();
 
-  xTaskCreate(task_blink_dot_separators, "blink_dot_separators", 2000, NULL, 5,
+  xTaskCreate(task_blink_dot_separators, "blink_dot_separators", 2000, NULL, 80,
               &g_task_blink_dot_separators_handle);
 
-  xTaskCreate(task_configure, "configure", 2000, NULL, 4,
+  xTaskCreate(task_configure, "configure", 2000, NULL, 70,
               &g_task_configure_handle);
 
-  xTaskCreate(task_special_modes, "special_modes", 2000, NULL, 3,
+  xTaskCreate(task_special_modes, "special_modes", 2000, NULL, 60,
               &g_task_special_modes_handle);
 
   xTaskCreate(task_display_slot_machine_cycle, "slot_machine_cycle", 2000, NULL,
-              3, NULL);
+              50, NULL);
 
-  xTaskCreate(task_set_time_from_ntp, "set_time_from_ntp", 5000, NULL, 2, NULL);
+  xTaskCreate(task_set_time_from_ntp, "set_time_from_ntp", 5000, NULL, 40,
+              NULL);
 
-  xTaskCreate(task_display_date, "display_date", 2000, NULL, 1,
+  xTaskCreate(task_display_date, "display_date", 2000, NULL, 30,
               &g_task_display_date_handle);
 
   xTaskCreate(task_display_time, "display_time", 4000, NULL, 0,
