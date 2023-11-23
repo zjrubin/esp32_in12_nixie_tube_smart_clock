@@ -10,6 +10,7 @@
 #include "special_modes.h"
 #include "tasks.h"
 #include "util.h"
+#include "weather.h"
 
 #define DEBOUNCE_TIME_MS 200
 #define DEBOUNCE_TIME_TICKS (DEBOUNCE_TIME_MS / portTICK_PERIOD_MS)
@@ -20,10 +21,12 @@ TaskHandle_t g_task_configure_handle = NULL;
 TaskHandle_t g_task_blink_dot_separators_handle = NULL;
 TaskHandle_t g_task_display_time_handle = NULL;
 TaskHandle_t g_task_display_date_handle = NULL;
+TaskHandle_t g_task_display_local_temperature_handle = NULL;
 
 void task_display_slot_machine_cycle(void* pvParameters);
 void task_display_time(void* pvParameters);
 void task_display_date(void* pvParameters);
+void task_display_local_temperature(void* pvParameters);
 void task_cycle_digit(void* pvParameters);
 void task_configure(void* pvParameters);
 void task_special_modes(void* pvParameters);
@@ -80,7 +83,10 @@ void setup() {
   xTaskCreate(task_display_date, "display_date", 2000, NULL, 30,
               &g_task_display_date_handle);
 
-  xTaskCreate(task_display_time, "display_time", 4000, NULL, 0,
+  xTaskCreate(task_display_local_temperature, "display_local_temperature",
+              10000, NULL, 20, &g_task_display_local_temperature_handle);
+
+  xTaskCreate(task_display_time, "display_time", 4000, NULL, 10,
               &g_task_display_time_handle);
 }
 
@@ -196,6 +202,48 @@ void task_display_date(void* pvParameters) {
 
     vTaskDelayUntil(&previous_wake_time,
                     date_display_frequency * MINUTE_FREERTOS);
+  }
+}
+
+void task_display_local_temperature(void* pvParameters) {
+  for (;;) {
+    double temperature;
+    if (!get_local_temperature(&temperature)) {
+      vTaskDelay(10 * MINUTE_FREERTOS);
+      continue;
+    }
+
+    size_t rounded_temperature = static_cast<size_t>(temperature);
+
+    // Shift the decimals 2 places to the left
+    double decimal_f = temperature - rounded_temperature;
+    uint8_t decimal = static_cast<uint8_t>(decimal_f * 100);
+
+    uint8_t tens_and_ones =
+        (10 * ((uint8_t)(rounded_temperature / (double)10) % 10)) +
+        (rounded_temperature % 10);
+
+    uint8_t thousands_and_hundreds =
+        (10 * ((uint8_t)(rounded_temperature / (double)1000)) % 10) +
+        ((uint8_t)(rounded_temperature / (double)100) % 10);
+
+    debug_serial_printf(
+        "thousands_and_hundreds: %hhu\ttens_and_ones: %hhu\tdecimal: %hhu\n",
+        thousands_and_hundreds, tens_and_ones, decimal);
+
+    if (xSemaphoreTake(Nixie_Display::display_mutex, portMAX_DELAY) == pdTRUE) {
+      Nixie_Display::get_instance().smooth_display_value(
+          500,
+          thousands_and_hundreds == 0 ? NIXIE_BLANK_DIGIT
+                                      : thousands_and_hundreds,
+          tens_and_ones, decimal, NIXIE_DOTS_BOTTOM_RIGHT, true);
+
+      vTaskDelay(20 * 1000 / portTICK_PERIOD_MS);
+
+      xSemaphoreGive(Nixie_Display::display_mutex);
+    }
+
+    vTaskDelay(5 * MINUTE_FREERTOS);
   }
 }
 
