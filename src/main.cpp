@@ -206,6 +206,10 @@ void task_display_date(void* pvParameters) {
 }
 
 void task_display_local_temperature(void* pvParameters) {
+  if (!EEPROM.read(EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_ADDRESS)) {
+    vTaskSuspend(NULL);
+  }
+
   for (;;) {
     double temperature;
     if (!get_local_temperature(&temperature)) {
@@ -243,7 +247,10 @@ void task_display_local_temperature(void* pvParameters) {
       xSemaphoreGive(Nixie_Display::display_mutex);
     }
 
-    vTaskDelay(5 * MINUTE_FREERTOS);
+    uint8_t local_temperature_display_frequency =
+        EEPROM.read(EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_ADDRESS);
+
+    vTaskDelay(local_temperature_display_frequency * MINUTE_FREERTOS);
   }
 }
 
