@@ -6,6 +6,7 @@
 class Nixie_Display;
 
 #define EEPROM_SIZE 10
+
 #define EEPROM_SENTINEL_ADDRESS 0
 #define EEPROM_INITIALIZED 1
 
@@ -28,6 +29,11 @@ class Nixie_Display;
 #define EEPROM_SPECIAL_MODES_DEFAULT 0
 #define EEPROM_SPECIAL_MODES_LOWER_BOUND 0
 #define EEPROM_SPECIAL_MODES_UPPER_BOUND 1
+
+#define EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_ADDRESS 5
+#define EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_DEFAULT 5
+#define EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_LOWER_BOUND 5
+#define EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_UPPER_BOUND 99
 
 // For 1 hour, the nixie display will cycle all of its digits very frequently.
 // By default, this period is scheduled for the early morning as to not be

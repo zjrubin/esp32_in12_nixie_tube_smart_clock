@@ -34,6 +34,11 @@ static const eeprom_option_t c_eeprom_options[] = {
     {EEPROM_SPECIAL_MODES_ADDRESS, EEPROM_SPECIAL_MODES_DEFAULT,
      EEPROM_SPECIAL_MODES_LOWER_BOUND, EEPROM_SPECIAL_MODES_UPPER_BOUND,
      &g_task_special_modes_handle},
+    {EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_ADDRESS,
+     EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_DEFAULT,
+     EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_LOWER_BOUND,
+     EEPROM_LOCAL_TEMPERATURE_DISPLAY_FREQUENCY_UPPER_BOUND,
+     &g_task_display_local_temperature_handle},
 };
 
 SemaphoreHandle_t g_semaphore_configure = xSemaphoreCreateBinary();
