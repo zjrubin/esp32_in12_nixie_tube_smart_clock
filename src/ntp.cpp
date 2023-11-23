@@ -12,38 +12,11 @@ const long int c_gmt_offset_sec = -18000;
 const int c_daylight_offset_sec = 3600;
 
 void set_time_from_ntp() {
-  // connect to WiFi
-  debug_serial_printf("Connecting to %s ", c_wifi_ssid);
-  WiFi.begin(c_wifi_ssid, c_wifi_password);
-
-  // Wait up to 30 seconds for the wifi to connect
-  bool connected = false;
-  for (int i = 0; i < 60; ++i) {
-    switch (WiFi.status()) {
-      case WL_CONNECTED:
-        connected = true;
-        break;
-
-      default:
-        debug_serial_print(".");
-        delay(500);
-        break;
-    }
-  }
-
-  if (!connected) {
-    // If not connected, just use the previously set time
-    debug_serial_println(" FAILED");
-    debug_serial_printfln(
-        "Failed to connect to wifi to set time from NTP. Defaulting to "
-        "previously set time\n\tssid: %s\n\tpassword: %s\n",
-        c_wifi_ssid, c_wifi_password);
+  if (!connect_to_wifi()) {
     return;
   }
 
-  debug_serial_println(" CONNECTED");
-
-  // init and get the time
+  // Init and get the time
   bool ntp_time_configured = false;
   for (int i = 1; i <= 30; ++i) {
     configTime(c_gmt_offset_sec, c_daylight_offset_sec, c_ntp_server);
@@ -61,10 +34,6 @@ void set_time_from_ntp() {
         "%s",
         c_ntp_server);
   }
-
-  // disconnect WiFi as it's no longer needed
-  WiFi.disconnect(true);
-  WiFi.mode(WIFI_OFF);
 }
 
 int print_local_time() {
@@ -77,3 +46,34 @@ int print_local_time() {
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
   return NTP_OK;
 }
+
+bool connect_to_wifi() {
+  // Connect to WiFi
+  debug_serial_printf("Connecting to %s ", c_wifi_ssid);
+  WiFi.begin(c_wifi_ssid, c_wifi_password);
+
+  // Wait up to 30 seconds for the wifi to connect
+  for (int i = 0; i < 60; ++i) {
+    switch (WiFi.status()) {
+      case WL_CONNECTED:
+        debug_serial_println(" CONNECTED");
+        return true;
+
+      default:
+        debug_serial_print(".");
+        delay(500);
+        break;
+    }
+  }
+
+  // If not connected, just use the previously set time
+  debug_serial_println(" FAILED");
+  debug_serial_printfln(
+      "Failed to connect to wifi to set time from NTP. Defaulting to "
+      "previously set time\n\tssid: %s\n\tpassword: %s\n",
+      c_wifi_ssid, c_wifi_password);
+
+  return false;
+}
+
+void disconnect_from_wifi() { WiFi.disconnect(true); }
